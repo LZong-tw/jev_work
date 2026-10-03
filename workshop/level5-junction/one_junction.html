@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Junction</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #171e26; --line: #2a3440; --ink: #e6edf3; --muted: #8b98a5;
+    --grass: #1d2b22; --asphalt: #2b3138; --paint: #c9d1d9; --green: #2ecc71; --red: #e5484d;
+    --amber: #f5a524; --left: #f0883e; --straight: #4c8dff; --right: #2bb5a8; --person: #f2d16b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 17px; margin: 0 8px 0 0; }
+  select, button, input[type=range] { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font: inherit; }
+  button { cursor: pointer; min-width: 38px; }
+  button:hover { border-color: var(--muted); }
+  main { display: grid; grid-template-columns: minmax(0, 760px) minmax(260px, 1fr); gap: 16px; padding: 16px; max-width: 1200px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  canvas { width: 100%; aspect-ratio: 1; display: block; border-radius: 10px; background: var(--grass); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat .k { color: var(--muted); font-size: 12px; }
+  .stat .v { font-size: 20px; font-variant-numeric: tabular-nums; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  td, th { padding: 5px 4px; text-align: left; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .lamp { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 2px; vertical-align: middle; }
+  .on { background: var(--green); } .off { background: #4a2326; border: 1px solid var(--red); }
+  .walk { color: var(--person); }
+  .log { margin-top: 12px; max-height: 210px; overflow: auto; font-size: 13px; }
+  .log div { padding: 3px 0; border-bottom: 1px dashed var(--line); }
+  .crash { color: var(--red); }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  .empty { padding: 40px; color: var(--muted); }
+  code { background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+  #scrub { flex: 1; min-width: 160px; padding: 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚦 One Junction</h1>
+  <select id="run" aria-label="Run"></select>
+  <button id="back" title="Previous tick">⏮</button>
+  <button id="play" title="Play / pause (space)">▶</button>
+  <button id="next" title="Next tick">⏭</button>
+  <select id="speed" aria-label="Speed">
+    <option value="1600">0.5×</option><option value="800" selected>1×</option>
+    <option value="400">2×</option><option value="200">4×</option>
+  </select>
+  <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Tick">
+</header>
+<main>
+  <div>
+    <canvas id="c" width="760" height="760"></canvas>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--left)"></span>left-turn car</span>
+      <span><span class="dot" style="background:var(--straight)"></span>straight</span>
+      <span><span class="dot" style="background:var(--right)"></span>right-turn car</span>
+      <span><span class="dot" style="background:var(--person)"></span>person</span>
+      <span>number at a stop line = cars waiting there</span>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="stats">
+      <div class="stat"><div class="k">Tick</div><div class="v" id="tick">–</div></div>
+      <div class="stat"><div class="k">Time · weather</div><div class="v" id="time">–</div></div>
+      <div class="stat"><div class="k">Score</div><div class="v" id="score">–</div></div>
+      <div class="stat"><div class="k">This tick</div><div class="v" id="points">–</div></div>
+    </div>
+    <table>
+      <thead><tr><th>Road</th><th>Light [L S S R]</th><th>People</th><th>Waiting</th></tr></thead>
+      <tbody id="lights"></tbody>
+    </table>
+    <div class="log" id="log"></div>
+  </div>
+</main>
+<script src="runs/one_runs.js"></script>
+<script>
+"use strict";
+const RUNS = window.ONE_JUNCTION_RUNS || [];
+const SIDES = ["top", "right", "bottom", "left"];
+const MOVE = ["L", "S", "S", "R"];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const COLOR = { L: css("--left"), S: css("--straight"), R: css("--right") };
+
+// ----- geometry: every road is drawn in its own frame (coming from the top, driving down), then rotated
+const SIZE = 760, C = SIZE / 2;
+const LW = 13;                 // lane width
+const H = 4 * LW;              // half of the junction box
+const CW = 14;                 // crosswalk width
+const S = H + CW + 3;          // distance from the centre to the stop line
+const BL = 15;                 // one block
+let BLOCKS = 20;
+
+const laneX = k => -(k + 0.5) * LW;                               // inbound lanes, left-turn lane nearest the middle
+const blockY = p => -(S + (BLOCKS - 1 - p + 0.5) * BL);           // block p, the last block at the stop line
+function rot(i, x, y) { const a = i * Math.PI / 2, c = Math.cos(a), s = Math.sin(a); return [C + x * c - y * s, C + x * s + y * c]; }
+
+// The path of a crossing car, in its road's frame: through the junction to its exit lane, then away
+function bezier(p0, p1, p2, n) { const out = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; out.push([u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]]); } return out; }
+function pathFor(lane) {
+  const x = laneX(lane), start = [[x, blockY(BLOCKS - 1)], [x, -S]];
+  const m = MOVE[lane];
+  let pts;
+  if (m === "S") pts = [...start, [x, S], [x, S + 6 * BL]];
+  else if (m === "L") pts = [...start, ...bezier([x, -S], [x, 0.5 * LW], [S, 0.5 * LW], 24).slice(1), [S + 6 * BL, 0.5 * LW]];
+  else pts = [...start, ...bezier([x, -S], [x, -3.5 * LW], [-S, -3.5 * LW], 16).slice(1), [-S - 6 * BL, -3.5 * LW]];
+  const len = [0]; for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  return { pts, len, total: len[len.length - 1] };
+}
+function along(path, u) {
+  const d = Math.max(0, Math.min(1, u)) * path.total;
+  let i = 1; while (i < path.len.length - 1 && path.len[i] < d) i++;
+  const a = path.pts[i - 1], b = path.pts[i], f = (d - path.len[i - 1]) / ((path.len[i] - path.len[i - 1]) || 1);
+  return { x: a[0] + (b[0] - a[0]) * f, y: a[1] + (b[1] - a[1]) * f, ang: Math.atan2(b[1] - a[1], b[0] - a[0]) };
+}
+const PATHS = [0, 1, 2, 3].map(pathFor);
+
+// Where each waiting / driving car is drawn: cars queue one block apart behind the stop line
+function layout(frame) {
+  const out = new Map(), lanes = {};
+  for (const [id, side, lane, pos] of frame.cars) (lanes[side * 4 + lane] ||= []).push({ id, side, lane, pos });
+  for (const list of Object.values(lanes)) {
+    list.sort((a, b) => b.pos - a.pos || a.id - b.id);
+    let prev = Infinity;
+    for (const c of list) { const y = Math.min(blockY(c.pos), prev - BL); prev = y; out.set(c.id, { ...c, y }); }
+  }
+  return out;
+}
+
+// ----- state
+const canvas = document.getElementById("c"), ctx = canvas.getContext("2d");
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+canvas.width = SIZE * dpr; canvas.height = SIZE * dpr; ctx.scale(dpr, dpr);
+let run = null, layouts = [], tick = 0, u = 0, playing = false, last = 0;
+const el = id => document.getElementById(id);
+const tickMs = () => +el("speed").value;
+
+function loadRun(i) {
+  run = RUNS[i]; BLOCKS = run.blocks || 20;
+  layouts = run.frames.map(layout);
+  tick = 0; u = 0;
+  el("scrub").max = run.frames.length - 2; el("scrub").value = 0;
+  panel();
+}
+
+// ----- drawing
+function rect(x, y, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); }
+function inFrame(i, fn) { ctx.save(); ctx.translate(C, C); ctx.rotate(i * Math.PI / 2); fn(); ctx.restore(); }
+
+function drawRoads(frame) {
+  rect(0, 0, SIZE, SIZE, css("--grass"));
+  const far = S + BLOCKS * BL + 20;
+  ctx.fillStyle = css("--asphalt");
+  ctx.fillRect(C - 4 * LW, C - far, 8 * LW, 2 * far);
+  ctx.fillRect(C - far, C - 4 * LW, 2 * far, 8 * LW);
+  for (let i = 0; i < 4; i++) inFrame(i, () => {
+    const d = frame.decision || { top: {}, right: {}, bottom: {}, left: {} };
+    const road = d[SIDES[i]] || { light: [0, 0, 0, 0], people: 0 };
+    // lane lines
+    ctx.strokeStyle = "rgba(201,209,217,.35)"; ctx.lineWidth = 1; ctx.setLineDash([6, 8]);
+    for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-k * LW, -S); ctx.lineTo(-k * LW, -far); ctx.stroke(); ctx.beginPath(); ctx.moveTo(k * LW, -S); ctx.lineTo(k * LW, -far); ctx.stroke(); }
+    ctx.setLineDash([]); ctx.strokeStyle = css("--amber"); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-1, -S); ctx.lineTo(-1, -far); ctx.moveTo(1, -S); ctx.lineTo(1, -far); ctx.stroke();
+    // block ticks along the curb, every 5 blocks
+    ctx.fillStyle = "rgba(201,209,217,.4)"; ctx.font = "9px system-ui"; ctx.textAlign = "center";
+    for (let p = 0; p < BLOCKS; p += 5) ctx.fillRect(-4 * LW - 5, blockY(p) - 0.5, 4, 1);
+    // crosswalk: zebra, brighter when people may walk
+    ctx.fillStyle = road.people ? "rgba(242,209,107,.85)" : "rgba(201,209,217,.5)";
+    for (let x = -4 * LW + 2; x < 4 * LW - 2; x += 7) ctx.fillRect(x, -H - CW + 1, 4, CW - 2);
+    // stop line and one light per lane
+    ctx.fillStyle = css("--paint"); ctx.fillRect(-4 * LW, -S - 1, 4 * LW, 2);
+    for (let k = 0; k < 4; k++) {
+      ctx.fillStyle = road.light[k] ? css("--green") : css("--red");
+      ctx.fillRect(laneX(k) - LW / 2 + 1.5, -S + 1, LW - 3, 5);
+      // lane arrow, painted on the road
+      arrow(laneX(k), blockY(BLOCKS - 4), MOVE[k]);
+    }
+    // the walk signal at the corner
+    ctx.fillStyle = road.people ? css("--green") : css("--red");
+    ctx.beginPath(); ctx.arc(-4 * LW - 9, -H - CW / 2, 4, 0, 7); ctx.fill();
+  });
+  // road names, upright, on the grass next to each road
+  ctx.fillStyle = "rgba(230,237,243,.75)"; ctx.font = "13px system-ui"; ctx.textAlign = "center";
+  [[C + 4 * LW + 26, 22], [SIZE - 30, C - 4 * LW - 10], [C - 4 * LW - 32, SIZE - 14], [30, C + 4 * LW + 20]]
+    .forEach(([x, y], i) => ctx.fillText(SIDES[i], x, y));
+}
+function arrow(x, y, m) {
+  ctx.save(); ctx.translate(x, y); ctx.strokeStyle = "rgba(201,209,217,.45)"; ctx.lineWidth = 1.5; ctx.beginPath();
+  ctx.moveTo(0, -5); ctx.lineTo(0, 2);
+  if (m === "S") { ctx.lineTo(0, 6); ctx.moveTo(-3, 3); ctx.lineTo(0, 6); ctx.lineTo(3, 3); }
+  if (m === "L") { ctx.lineTo(4, 4); ctx.moveTo(1, 4); ctx.lineTo(4, 4); ctx.lineTo(4, 1); }
+  if (m === "R") { ctx.lineTo(-4, 4); ctx.moveTo(-1, 4); ctx.lineTo(-4, 4); ctx.lineTo(-4, 1); }
+  ctx.stroke(); ctx.restore();
+}
+
+function car(side, x, y, ang, color, alpha) {
+  const [gx, gy] = rot(side, x, y);
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(gx, gy); ctx.rotate(ang + side * Math.PI / 2);
+  ctx.fillStyle = color; roundRect(-BL * 0.4, -(LW - 4) / 2, BL * 0.8, LW - 4, 2.5); ctx.fill();
+  ctx.fillStyle = "rgba(10,15,20,.55)"; ctx.fillRect(BL * 0.12, -(LW - 6) / 2, 2.5, LW - 6);  // windscreen
+  ctx.restore();
+}
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+function drawCars(t, f) {
+  const now = layouts[t], then = layouts[t + 1], frame = run.frames[t];
+  const crossing = new Map((frame.crossed || []).map(([id, side, lane]) => [id, { side: SIDES.indexOf(side), lane }]));
+  const crashedMoves = new Set((frame.crashes || []).flatMap(c => c.moves.map(m => m[0] + m[1])));
+  const down = Math.PI / 2;
+  for (const [id, c] of now) {
+    if (crossing.has(id)) continue;
+    const next = then && then.get(id);
+    const y = next ? c.y + (next.y - c.y) * f : c.y;
+    car(c.side, laneX(c.lane), y, down, COLOR[MOVE[c.lane]], 1);
+  }
+  if (then) for (const [id, c] of then) if (!now.has(id)) {      // new cars drive in from the edge
+    car(c.side, laneX(c.lane), c.y - BL * (1 - f), down, COLOR[MOVE[c.lane]], f);
+  }
+  for (const [id, x] of crossing) {
+    const crashed = crashedMoves.has(SIDES[x.side] + MOVE[x.lane]);
+    const path = PATHS[x.lane];
+    const reach = crashed ? 0.42 : 1;                              // a crashed car stops in the junction
+    const p = along(path, Math.min(f, reach) * (crashed ? 1 : 1));
+    const fade = crashed ? (f > 0.75 ? 1 - (f - 0.75) * 3 : 1) : (f > 0.7 ? 1 - (f - 0.7) / 0.3 : 1);
+    car(x.side, p.x, p.y, p.ang, crashed ? "#8b98a5" : COLOR[MOVE[x.lane]], Math.max(0, fade));
+  }
+}
+
+function drawPeople(t, f) {
+  const frame = run.frames[t], next = run.frames[t + 1] || frame, walked = frame.walked || {};
+  const hit = new Set((frame.crashes || []).filter(c => c.kind === "person").map(c => c.road));
+  for (let i = 0; i < 4; i++) {
+    const side = SIDES[i], crossing = walked[side] || 0;
+    const waitNow = frame.people[i] - crossing, waitNext = next.people[i];
+    const waiting = f < 0.5 ? frame.people[i] - Math.round(crossing * Math.min(1, f * 4)) : Math.max(waitNow, waitNext);
+    inFrame(i, () => {
+      ctx.fillStyle = css("--person");
+      for (let n = 0; n < Math.min(waiting, 12); n++) {             // waiting at the two corners
+        const left = n % 2 === 0, row = Math.floor(n / 2);
+        ctx.beginPath(); ctx.arc((left ? -1 : 1) * (4 * LW + 8 + (row % 3) * 6), -H - CW / 2 + Math.floor(row / 3) * 6 - 3, 2.4, 0, 7); ctx.fill();
+      }
+      if (waiting > 0) { ctx.font = "11px system-ui"; ctx.textAlign = "left"; ctx.fillText(waiting, 4 * LW + 28, -H - CW / 2 + 4); }
+      for (let n = 0; n < crossing; n++) {                          // walking across, half from each side
+        const dir = n % 2 === 0 ? 1 : -1, lane = (n % 3) - 1;
+        const x = dir * (-4 * LW - 4 + (8 * LW + 8) * Math.min(1, f * 1.1 + n * 0.03));
+        ctx.fillStyle = hit.has(side) ? css("--red") : css("--person");
+        ctx.beginPath(); ctx.arc(x, -H - CW / 2 + lane * 3.5, 2.6, 0, 7); ctx.fill();
+      }
+    });
+  }
+}
+
+function drawQueues(t, f) {
+  const frame = f < 0.5 ? run.frames[t] : run.frames[t + 1] || run.frames[t];
+  const count = {};
+  for (const [, side, lane, pos] of frame.cars) if (pos === BLOCKS - 1) count[side * 4 + lane] = (count[side * 4 + lane] || 0) + 1;
+  ctx.font = "bold 11px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (const [key, n] of Object.entries(count)) {
+    if (n < 2) continue;
+    const side = Math.floor(key / 4), lane = key % 4;
+    const [gx, gy] = rot(side, laneX(lane), blockY(BLOCKS - 1));
+    ctx.fillStyle = "rgba(15,20,25,.85)"; ctx.beginPath(); ctx.arc(gx, gy, 8, 0, 7); ctx.fill();
+    ctx.fillStyle = css("--ink"); ctx.fillText(n, gx, gy + 0.5);
+  }
+  ctx.textBaseline = "alphabetic";
+}
+
+function drawCrashes(t, f) {
+  const frame = run.frames[t];
+  if (!frame.crashes || !frame.crashes.length || f < 0.38) return;
+  const k = Math.min(1, (f - 0.38) / 0.25);
+  frame.crashes.forEach((c, n) => {
+    let x = 0, y = 0;
+    if (c.kind === "person") { const i = SIDES.indexOf(c.road); [x, y] = rot(i, 0, -H - CW / 2); x -= C; y -= C; }
+    else { const pts = c.moves.map(([s, m]) => { const p = along(PATHS[MOVE.indexOf(m)], 0.42); return rot(SIDES.indexOf(s), p.x, p.y); });
+           x = (pts[0][0] + pts[1][0]) / 2 - C; y = (pts[0][1] + pts[1][1]) / 2 - C; }
+    ctx.save(); ctx.translate(C + x, C + y + n * 3); ctx.globalAlpha = 1 - Math.max(0, f - 0.85) / 0.15;
+    ctx.fillStyle = css("--red");
+    ctx.beginPath();
+    for (let a = 0; a < 16; a++) { const r = (a % 2 ? 7 : 16) * k; ctx.lineTo(Math.cos(a * Math.PI / 8) * r, Math.sin(a * Math.PI / 8) * r); }
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = "bold 12px system-ui"; ctx.textAlign = "center";
+    ctx.fillText(c.points, 0, -20 * k);
+    ctx.restore();
+  });
+}
+
+let drops = Array.from({ length: 120 }, () => [Math.random() * SIZE, Math.random() * SIZE]);
+function drawRain(t, f, ms) {
+  // rain fades in or out during the tick when the weather changes, so the picture never jumps
+  const wet = fr => (fr && fr.weather === "rain" ? 1 : 0);
+  const now = wet(run.frames[t]), next = run.frames[t + 1] ? wet(run.frames[t + 1]) : now;
+  const k = now + (next - now) * f;
+  if (k <= 0) return;
+  ctx.fillStyle = `rgba(20,30,45,${0.18 * k})`; ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.strokeStyle = `rgba(170,200,230,${0.35 * k})`; ctx.lineWidth = 1; ctx.beginPath();
+  for (const d of drops) { d[1] = (d[1] + ms * 0.5) % SIZE; d[0] = (d[0] + ms * 0.08) % SIZE; ctx.moveTo(d[0], d[1]); ctx.lineTo(d[0] - 2, d[1] - 9); }
+  ctx.stroke();
+}
+
+function draw(ms) {
+  if (!run) return;
+  const frame = run.frames[tick];
+  drawRoads(frame);
+  drawCars(tick, u);
+  drawQueues(tick, u);
+  drawPeople(tick, u);
+  drawCrashes(tick, u);
+  drawRain(tick, u, ms);
+}
+
+// ----- side panel
+function lamps(light) { return light.map(x => `<span class="lamp ${x ? "on" : "off"}"></span>`).join(""); }
+function panel() {
+  const fr = run.frames[tick], d = fr.decision || {};
+  el("tick").textContent = `${fr.t} / ${run.frames.length - 1}`;
+  el("time").textContent = `${fr.time} ${fr.weather === "rain" ? "🌧" : "☀️"}`;
+  el("score").textContent = fr.score_after ?? fr.score;
+  el("points").textContent = fr.points === undefined ? "–" : (fr.points > 0 ? "+" : "") + fr.points;
+  el("lights").innerHTML = SIDES.map((s, i) => {
+    const w = fr.cars.filter(c => c[1] === i && c[3] === BLOCKS - 1).length;
+    const r = d[s] || { light: [0, 0, 0, 0], people: 0 };
+    return `<tr><td>${s}</td><td>${lamps(r.light)}</td><td>${r.people ? '<span class="walk">🚶 walk</span>' : "–"} (${fr.people[i]})</td><td>${w}</td></tr>`;
+  }).join("");
+  el("log").innerHTML = run.frames.slice(0, tick + 1).filter(f => f.decision).reverse().map(f => {
+    const cr = (f.crashes || []).map(c => c.kind === "cars"
+      ? `<div class="crash">t${f.t} 💥 ${c.moves.map(m => m[0] + " " + {L: "left turn", S: "straight", R: "right turn"}[m[1]]).join(" × ")} ${c.points}</div>`
+      : `<div class="crash">t${f.t} 🚑 car hit people on the ${c.road} road ${c.points}</div>`).join("");
+    return cr + `<div>t${f.t} ${f.time}: ${f.crossed.length} cars, ${Object.values(f.walked || {}).reduce((a, b) => a + b, 0)} people crossed, ${f.points > 0 ? "+" : ""}${f.points}</div>`;
+  }).join("");
+  el("scrub").value = tick;
+}
+
+// ----- controls and the animation loop
+function frame(now) {
+  const ms = last ? now - last : 16; last = now;
+  if (playing && run) {
+    u += ms / tickMs();
+    while (u >= 1) {
+      if (tick < run.frames.length - 2) { tick++; u -= 1; panel(); }
+      else { u = 1; playing = false; el("play").textContent = "▶"; break; }
+    }
+  }
+  draw(ms);
+  requestAnimationFrame(frame);
+}
+function go(t) { tick = Math.max(0, Math.min(run.frames.length - 2, t)); u = 0; panel(); }
+el("play").onclick = () => { if (!run) return; if (tick >= run.frames.length - 2 && u >= 1) go(0); playing = !playing; el("play").textContent = playing ? "⏸" : "▶"; };
+el("next").onclick = () => { playing = false; el("play").textContent = "▶"; go(tick + 1); };
+el("back").onclick = () => { playing = false; el("play").textContent = "▶"; go(tick - 1); };
+el("scrub").oninput = e => go(+e.target.value);
+el("run").onchange = e => loadRun(+e.target.value);
+document.addEventListener("keydown", e => { if (e.code === "Space") { e.preventDefault(); el("play").click(); } if (e.code === "ArrowRight") el("next").click(); if (e.code === "ArrowLeft") el("back").click(); });
+
+if (!RUNS.length) {
+  document.querySelector("main").innerHTML = '<div class="empty">No runs yet. Run <code>python level5-junction/one_junction.py --officer rules</code>, then reload this page.</div>';
+} else {
+  el("run").innerHTML = RUNS.map((r, i) => `<option value="${i}">Run ${r.run}: ${r.officer}, ${r.ticks} ticks from ${r.start}, score ${r.score}, crashes ${r.crashes}</option>`).join("");
+  el("run").value = RUNS.length - 1;
+  loadRun(RUNS.length - 1);
+  requestAnimationFrame(frame);
+}
+window.viewer = { go, setU: v => { u = v; }, get tick() { return tick; } };  // for screenshots and tests
+</script>
+</body>
+</html>

@@ -1,0 +1,1824 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Four Crossings</title>
+<style>
+  :root {
+    --bg: #0e1318; --panel: #161d25; --line: #28323d; --ink: #e8eef4; --muted: #8d9aa8;
+    --green: #2fd27a; --amber: #ffb020; --red: #ff4d55; --accent: #6aa9ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 17px; margin: 0 10px 0 0; white-space: nowrap; }
+  button, select { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 6px 10px; font: inherit; cursor: pointer; }
+  button:hover, select:hover { border-color: var(--muted); }
+  .clock { font-variant-numeric: tabular-nums; font-size: 18px; min-width: 70px; }
+  .hint { color: var(--muted); font-size: 12px; }
+  main { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px; padding: 14px 16px; }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+  .stage { position: relative; }
+  canvas { width: 100%; aspect-ratio: 4 / 3; display: block; border-radius: 10px; background: #1b2430; touch-action: none; cursor: grab; }
+  canvas[hidden] { display: none; }
+  #labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: 10px; }
+  /* a traffic light: a dark housing with red / yellow / green lamps, plus a left-arrow lamp */
+  .tl { display: inline-flex; align-items: center; gap: 2px; }
+  .tl .hous { display: inline-flex; flex-direction: column; gap: 2px; padding: 3px; border-radius: 5px; background: #0d1115; border: 1px solid #2c343d; }
+  .tl .hous i, .tl .arw { width: 9px; height: 9px; border-radius: 50%; display: block; }
+  .tl .hous i.r { background: #4a1a1e; } .tl .hous i.y { background: #4a3a12; } .tl .hous i.g { background: #133a26; }
+  .tl .hous i.r.on { background: #ff3b47; box-shadow: 0 0 6px #ff3b47; }
+  .tl .hous i.y.on { background: #ffb020; box-shadow: 0 0 6px #ffb020; }
+  .tl .hous i.g.on { background: #2fd27a; box-shadow: 0 0 6px #2fd27a; }
+  .tl .arw { width: 13px; height: 13px; display: inline-grid; place-items: center; font: 700 10px/1 system-ui; color: #0d1115;
+             background: #2a2f36; border: 1px solid #2c343d; }
+  .tl .arw.G { background: #2fd27a; box-shadow: 0 0 6px #2fd27a; } .tl .arw.Y { background: #ffb020; } .tl .arw.R { background: #ff3b47; color: #fff; }
+  .sig { position: absolute; transform: translate(-50%, -100%); }
+  .xbadge { position: absolute; transform: translate(-50%, -50%); display: grid; grid-template-columns: auto auto auto;
+            grid-template-rows: auto auto auto; gap: 1px; padding: 4px; border-radius: 10px; background: rgba(11,15,20,.78);
+            border: 1px solid rgba(255,255,255,.14); align-items: center; justify-items: center; pointer-events: auto; }
+  .xbadge .n { grid-area: 1 / 2; } .xbadge .w { grid-area: 2 / 1; } .xbadge .c { grid-area: 2 / 2; }
+  .xbadge .e { grid-area: 2 / 3; } .xbadge .s { grid-area: 3 / 2; }
+  .xbadge .id, .xid { grid-area: 1 / 1; font: 800 13px system-ui; color: #fff; padding: 0 3px; }
+  .xid { position: absolute; transform: translate(-50%, -50%); padding: 2px 8px; border-radius: 999px; background: rgba(11,15,20,.78);
+         border: 1px solid rgba(255,255,255,.2); pointer-events: none; }
+  .jid { display: inline-block; min-width: 26px; padding: 0 5px; margin-right: 4px; border-radius: 6px; background: #2a3542; text-align: center; }
+  .walker { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; background: #4a1a1e; }
+  .walker.on { background: #2fd27a; box-shadow: 0 0 8px #2fd27a; } .walker.blink { background: #ffb020; }
+  canvas.drag { cursor: grabbing; }
+  aside { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .card.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .stat .k { color: var(--muted); font-size: 12px; }
+  .stat .v { font-size: 19px; font-variant-numeric: tabular-nums; }
+  .jhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .jname { font-weight: 600; }
+  .phase { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: #23303d; white-space: nowrap; }
+  .phase.green { background: rgba(47,210,122,.18); color: var(--green); }
+  .phase.yellow { background: rgba(255,176,32,.18); color: var(--amber); }
+  .phase.red { background: rgba(255,77,85,.16); color: var(--red); }
+  .btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-top: 8px; }
+  .btns button { padding: 6px 0; font-size: 12px; }
+  .btns button.on { background: rgba(47,210,122,.2); border-color: var(--green); color: var(--green); }
+  .btns button.req { border-color: var(--amber); color: var(--amber); }
+  .row { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 12px; color: var(--muted); }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .ok { color: var(--green); } .bad { color: var(--red); }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0 8px; }
+  .tile { background: #1c2530; border-radius: 8px; padding: 6px 8px; }
+  .tile .k { color: var(--muted); font-size: 11px; } .tile .v { font-size: 17px; font-variant-numeric: tabular-nums; }
+  .chart { margin-top: 8px; position: relative; } .ct { color: var(--muted); font-size: 11px; margin-bottom: 2px; }
+  .chart svg { width: 100%; height: 74px; display: block; overflow: visible; }
+  .chart svg text { fill: var(--muted); font-size: 9px; font-family: system-ui; }
+  .bars { display: grid; grid-template-columns: auto 1fr auto; gap: 3px 6px; align-items: center; font-size: 11px; }
+  .bars .bar { height: 8px; border-radius: 0 4px 4px 0; background: #3987e5; min-width: 2px; }
+  .bars .n { color: var(--ink); font-variant-numeric: tabular-nums; } .bars .lab { color: var(--muted); }
+  .decisions { list-style: none; margin: 0; padding: 0; max-height: 210px; overflow-y: auto; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .decisions li { display: grid; grid-template-columns: 44px 40px 1fr auto 46px; gap: 6px; align-items: center; padding: 3px 2px; border-bottom: 1px solid var(--line); }
+  .decisions li:first-child { background: rgba(57,135,229,.12); }
+  .decisions .n { color: var(--ink); } .decisions .when, .decisions .ms { color: var(--muted); }
+  .decisions .ph { display: inline-block; width: 20px; margin-right: 3px; text-align: center; border-radius: 4px; background: #1c2530; color: var(--muted); }
+  .decisions .ph.chg { background: #3987e5; color: #fff; font-weight: 600; }
+  .decisions .ph.off { opacity: .5; }
+  .decisions .err { color: var(--red); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .decisions .pts { text-align: right; font-weight: 700; }
+  .tip { position: absolute; pointer-events: none; background: #0b0f14; border: 1px solid var(--line); border-radius: 6px; padding: 4px 7px; font-size: 11px; z-index: 5; white-space: nowrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚦 Four Crossings</h1>
+  <button id="play" title="Play / pause (space)">⏸</button>
+  <button id="viewBtn" title="Switch between the 3D city and the 2D map">2D map</button>
+  <label class="hint" title="A vehicle that goes crosses its crossing in exactly 1 tick">1 tick =
+    <select id="tickMs" aria-label="Tick length">
+      <option value="4000">4 s</option><option value="2000" selected>2 s</option><option value="1000">1 s</option>
+      <option value="500">500 ms</option><option value="250">250 ms</option>
+    </select></label>
+  <span class="clock" id="clock">07:30</span>
+  <span class="hint" id="wave" title="Rush hours: one side of the map, or the people, get much busier for an hour"></span>
+  <span class="clock" id="tickBox" hidden style="font-size:15px">tick <b id="tickN">0</b> <span class="hint" id="tickNext"></span></span>
+  <label class="hint" id="allModeBox">All lights:
+    <select id="allMode"><option value="">mixed</option><option value="fixed">Fixed timer</option>
+      <option value="smart">Smart</option><option value="manual">Manual</option></select></label>
+  <span class="hint" id="helpText">Drag to move · wheel to zoom · click a crossing to select it</span>
+</header>
+<main>
+  <div class="stage"><canvas id="c"></canvas><canvas id="c3" hidden></canvas><div id="labels"></div></div>
+  <aside>
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><div class="k">On the road</div><div class="v" id="sVeh">0</div></div>
+        <div class="stat"><div class="k">People walking</div><div class="v" id="sPed">0</div></div>
+        <div class="stat"><div class="k">Trips done (vehicles · people)</div><div class="v" id="sTrips">0 · 0</div></div>
+        <div class="stat"><div class="k">Waiting now (vehicles · people)</div><div class="v" id="sWait">0 · 0</div></div>
+        <div class="stat"><div class="k">Avg wait per vehicle</div><div class="v" id="sVW">0 s</div></div>
+        <div class="stat"><div class="k">Avg wait per person</div><div class="v" id="sPW">0 s</div></div>
+      </div>
+      <div class="row"><span>Collisions</span><span id="sCol" class="ok">0</span></div>
+    </div>
+    <div class="card" id="jevCard" hidden>
+      <div class="jhead"><span class="jname">🤖 Jev, live</span><span class="phase" id="jevStatus">waiting</span></div>
+      <div class="tiles">
+        <div class="tile"><div class="k">Calls</div><div class="v" id="jevCalls">0</div></div>
+        <div class="tile"><div class="k">Input tokens</div><div class="v" id="jevTokens">0</div></div>
+        <div class="tile"><div class="k">Cost</div><div class="v" id="jevCost">$0.0000</div></div>
+        <div class="tile"><div class="k">Avg response</div><div class="v" id="jevLat">–</div></div>
+        <div class="tile" title="Every tick: +1 for each vehicle or person that got across a crossing, −0.2 for each one still waiting"><div class="k">Score</div><div class="v" id="jevScore">0</div></div>
+        <div class="tile" title="Your score per tick on average: the higher, the better your decide() runs the city"><div class="k">Per tick · best</div><div class="v" id="jevAvg">–</div></div>
+      </div>
+      <div class="chart"><div class="ct">Decisions, newest first · lights of crossings 0–3</div>
+        <ol id="decisions" class="decisions"></ol></div>
+      <div class="chart"><div class="ct">Cost so far (US$)</div><svg id="chCost" viewBox="0 0 300 74"></svg></div>
+      <div class="chart"><div class="ct">Response time per call (ms)</div><svg id="chLat" viewBox="0 0 300 74"></svg></div>
+      <div class="chart"><div class="ct">Vehicles waiting · ▾ = your decide() answered</div><svg id="chWait" viewBox="0 0 300 74"></svg></div>
+      <div class="chart"><div class="ct">Lights chosen (all crossings)</div><div id="chPicks"></div></div>
+      <div class="row"><span>Last decision</span><span id="jevWhen">–</span></div>
+      <div id="jevNote" style="font-size:12px;margin-top:4px;color:var(--muted)"></div>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <div id="junctions"></div>
+    <div class="card legend">
+      <span><span class="sw" style="background:#d8dee6"></span>car</span>
+      <span><span class="sw" style="background:#ffd23f"></span>taxi</span>
+      <span><span class="sw" style="background:#3d7bd9"></span>bus</span>
+      <span><span class="sw" style="background:#2b2f36;border:1px solid #888"></span>scooter</span>
+      <span><span class="sw" style="background:#ff9f1c"></span>bike (green lane)</span>
+      <span><span class="sw" style="background:#f4a6c1;border-radius:50%"></span>people</span>
+      <span style="grid-column:1/-1">A = N–S straight + right · B = N–S left · C = E–W straight + right · D = E–W left · W = everyone walks (all zebras)</span>
+    </div>
+  </aside>
+</main>
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script>
+"use strict";
+// =============================================================================================
+// Four Crossings: a small city with 4 signalised crossings, zebras, cars, taxis, buses,
+// scooters, bikes and people. Traffic drives on the right (like Taipei).
+// The lights are controlled per crossing: Fixed timer, Smart (reacts to queues) or Manual.
+// Safety is in code: yellow, all-red, and a crossing only turns green when it is empty.
+// =============================================================================================
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const params = new URLSearchParams(location.search);
+const SEED = +(params.get("seed") || 7);
+const rnd = mulberry32(SEED);          // traffic and people
+const lrnd = mulberry32(SEED * 31 + 5); // buildings and trees
+const pick = (arr, r = rnd) => arr[Math.floor(r() * arr.length)];
+
+// ----- the map, in metres -----------------------------------------------------------------
+const W = 400, H = 300;
+const XS = [133, 267], YS = [100, 200];
+const AVENUES = ["Fuxing S. Rd", "Dunhua S. Rd"], STREETS = ["Zhongxiao E. Rd", "Ren'ai Rd"];
+const LANE = 3.2, MED = 0.3, BIKE = 1.8, WALK = 3.2;
+const OFF = { L: MED + LANE / 2, S: MED + LANE * 1.5, B: MED + LANE * 2 + BIKE / 2 }; // right of the centre line
+const HW = MED + 2 * LANE + BIKE;      // half road width, 8.5 m
+const ZEB = [HW + 0.8, HW + 3.8];      // the zebra band, from the junction centre
+const STOP = HW + 4.6;                 // stop line = edge of the crossing box
+const PO = (ZEB[0] + ZEB[1]) / 2;      // where people stand / walk across
+const DIRS = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
+const rightOf = d => [-d[1], d[0]];
+const TURN = { N: { S: "N", R: "E", L: "W" }, S: { S: "S", R: "W", L: "E" }, E: { S: "E", R: "S", L: "N" }, W: { S: "W", R: "N", L: "S" } };
+const add = (p, d, k) => [p[0] + d[0] * k, p[1] + d[1] * k];
+const fmtClock = m => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(Math.floor(m % 60)).padStart(2, "0")}`;
+
+// ----- crossings and their lights ----------------------------------------------------------
+const PHASES = {
+  A: { heads: "NS", moves: "SR", label: "N–S straight + right" },
+  B: { heads: "NS", moves: "L", label: "N–S left turn" },
+  C: { heads: "EW", moves: "SR", label: "E–W straight + right" },
+  D: { heads: "EW", moves: "L", label: "E–W left turn" },
+  W: { heads: "", moves: "", label: "everyone walks" },
+};
+const ORDER = ["A", "B", "C", "D", "W"];
+const FIXED = { A: 18, B: 7, C: 18, D: 7, W: 12 };
+const YELLOW = 3, ALLRED = 1.5, FLASH = 5;
+const JUNCTIONS = [];
+YS.forEach((y, r) => XS.forEach((x, c) => JUNCTIONS.push({
+  id: JUNCTIONS.length, x, y, r, c, name: `${AVENUES[c].split(" ")[0]} × ${STREETS[r].split(" ")[0]}`,
+  mode: "smart", phase: "A", stage: "green", t: 0, serial: 1, request: null,
+  box: new Set(), zebraPeds: 0,
+})));
+const J_AT = (x, y) => JUNCTIONS.find(j => j.x === x && j.y === y).id;
+
+// ----- road segments: one per direction between two crossings (or the map edge) -------------
+const SEGS = [];
+function addLine(horizontal, c, stops) {
+  const lo = -25, hi = (horizontal ? W : H) + 25;
+  for (const head of horizontal ? ["E", "W"] : ["S", "N"]) {
+    const sg = head === "E" || head === "S" ? 1 : -1;
+    const pts = sg > 0 ? [lo, ...stops, hi] : [hi, ...[...stops].reverse(), lo];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const from = i > 0 ? (horizontal ? J_AT(a, c) : J_AT(c, a)) : null;
+      const to = i < pts.length - 2 ? (horizontal ? J_AT(b, c) : J_AT(c, b)) : null;
+      const s0 = a + (from !== null ? sg * STOP : 0), s1 = b - (to !== null ? sg * STOP : 0);
+      SEGS.push({ id: SEGS.length, head, start: horizontal ? [s0, c] : [c, s0], len: Math.abs(s1 - s0), from, to,
+                  lanes: { L: [], S: [], B: [] }, connQ: { L: [], S: [], B: [] }, backlog: [] });
+    }
+  }
+}
+YS.forEach(y => addLine(true, y, XS));
+XS.forEach(x => addLine(false, x, YS));
+const outSeg = (j, head) => SEGS.find(s => s.from === j && s.head === head);
+const inSeg = (j, head) => SEGS.find(s => s.to === j && s.head === head);
+const ENTRIES = SEGS.filter(s => s.from === null);
+function lanePoint(seg, s, lane) { const d = DIRS[seg.head]; return add(add(seg.start, d, s), rightOf(d), OFF[lane]); }
+
+// paths through a crossing (cubic curves for turns), cached
+const PATHS = new Map();
+function pathFor(a, laneA, b, laneB) {
+  const key = `${a.id}${laneA}>${b.id}${laneB}`;
+  if (PATHS.has(key)) return PATHS.get(key);
+  const p0 = lanePoint(a, a.len, laneA), p3 = lanePoint(b, 0, laneB), d0 = DIRS[a.head], d3 = DIRS[b.head];
+  let pts;
+  if (a.head === b.head) pts = [p0, p3];
+  else {
+    // a quarter ellipse: it bulges away from the corner, so opposite left turns pass each other
+    const dx = p3[0] - p0[0], dy = p3[1] - p0[1];
+    const k0 = 0.552 * Math.abs(dx * d0[0] + dy * d0[1]), k3 = 0.552 * Math.abs(dx * d3[0] + dy * d3[1]);
+    const p1 = add(p0, d0, k0), p2 = add(p3, d3, -k3);
+    pts = [];
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20, u = 1 - t;
+      pts.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+                u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
+    }
+  }
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const path = { pts, cum, len: cum[cum.length - 1] };
+  PATHS.set(key, path);
+  return path;
+}
+function along(path, s) {
+  s = Math.max(0, Math.min(path.len, s));
+  let i = 1;
+  while (i < path.cum.length - 1 && path.cum[i] < s) i++;
+  const a = path.pts[i - 1], b = path.pts[i], f = (s - path.cum[i - 1]) / ((path.cum[i] - path.cum[i - 1]) || 1);
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, Math.atan2(b[1] - a[1], b[0] - a[0])];
+}
+
+// ----- vehicles ------------------------------------------------------------------------------
+const TYPES = {
+  car:     { len: 4.5, w: 1.9, v0: 13.9, a: 1.7, b: 2.6, bike: false, share: 0.44 },
+  taxi:    { len: 4.6, w: 1.9, v0: 14.5, a: 1.9, b: 2.8, bike: false, share: 0.11 },
+  bus:     { len: 11.5, w: 2.5, v0: 11.0, a: 1.0, b: 2.0, bike: false, share: 0.05 },
+  scooter: { len: 1.9, w: 0.8, v0: 12.0, a: 2.2, b: 3.0, bike: true, share: 0.27 },
+  bike:    { len: 1.8, w: 0.7, v0: 5.0, a: 1.0, b: 2.0, bike: true, share: 0.13 },
+};
+const CAR_COLORS = ["#d8dee6", "#e9ecef", "#1f2329", "#9aa4af", "#b3262e", "#2d5fa8", "#5b6770", "#e1e5ea", "#7a1f2b", "#3f6f50"];
+const SHIRTS = ["#f4a6c1", "#6ec1e4", "#ffd166", "#ef476f", "#06d6a0", "#ffffff", "#c3a6ff", "#ff9f68", "#8ecae6"];
+let nextId = 1;
+const vehicles = new Set();
+function randomType() {
+  let r = rnd();
+  for (const [k, t] of Object.entries(TYPES)) { if ((r -= t.share) < 0) return k; }
+  return "car";
+}
+function randomMove(bike) { const r = rnd(); return bike ? (r < 0.78 ? "S" : "R") : (r < 0.2 ? "L" : r < 0.8 ? "S" : "R"); }
+function laneFor(v, seg) { return v.spec.bike ? "B" : seg.to === null ? (v.id % 2 ? "L" : "S") : (v.move === "L" ? "L" : "S"); }
+
+function makeVehicle(type) {
+  const spec = TYPES[type];
+  return { id: nextId++, type, spec, len: spec.len, v: 0, s: 0, seg: null, lane: null, move: null, conn: null,
+           plan: null, wait: 0, acc: 0, color: type === "car" ? pick(CAR_COLORS) : null, rider: pick(SHIRTS),
+           bus: 200 + Math.floor(rnd() * 99), boxJ: null, waitHere: 0 };
+}
+function placeOn(v, seg, s) {
+  v.seg = seg; v.s = s;
+  v.move = seg.to === null ? null : randomMove(v.spec.bike);
+  v.lane = laneFor(v, seg);
+  const lane = seg.lanes[v.lane];
+  let i = lane.length;
+  while (i > 0 && lane[i - 1].s < s) i--;
+  lane.splice(i, 0, v);
+}
+
+// ----- signals ---------------------------------------------------------------------------------
+function signalFor(j, head, move) {
+  const p = PHASES[j.phase];
+  if (!p.heads.includes(head) || !p.moves.includes(move)) return "R";
+  return j.stage === "green" ? "G" : j.stage === "yellow" ? "Y" : "R";
+}
+// The room at the start of a lane when a vehicle that goes now gets there: at the end of the tick. By then the
+// last vehicle in it has driven on at its speed, but not into the vehicle ahead of it (nor past the stop line).
+function tailRoom(seg, lane) {
+  const l = seg.lanes[lane], tail = l[l.length - 1], lead = l[l.length - 2];
+  const ahead = !tail ? 0 : lead ? lead.s - lead.len - 2 - tail.s : seg.to === null ? Infinity : seg.len - tail.s;
+  const onward = tail ? Math.max(0, Math.min(tail.v * TICK, ahead)) : 0;
+  const coming = [...vehicles].filter(v => v.conn && v.conn.out === seg && v.conn.outLane === lane);
+  return (tail ? tail.s - tail.len + onward : seg.len) - coming.reduce((a, v) => a + v.len + 2.5, 0);
+}
+function planFor(v) {
+  if (v.plan) return v.plan;
+  const j = v.seg.to, out = outSeg(j, TURN[v.seg.head][v.move]);
+  const nextMove = out.to === null ? null : randomMove(v.spec.bike);
+  const outLane = v.spec.bike ? "B" : out.to === null ? (v.id % 2 ? "L" : "S") : (nextMove === "L" ? "L" : "S");
+  return (v.plan = { out, outLane, nextMove, path: pathFor(v.seg, v.lane, out, outLane) });
+}
+function mayGo(v) {
+  const j = JUNCTIONS[v.seg.to];
+  if (signalFor(j, v.seg.head, v.move) !== "G") return false;        // a tick across starts only on green
+  // room for it after the crossing, and to stop there (braking hard, 9 m/s²) from the speed it comes out at
+  const plan = planFor(v), out = crossProfile(v.v, plan.path.len + v.len + 0.5 - (v.s - v.seg.len), cruiseOf(v)).vc;
+  const fits = lane => tailRoom(plan.out, lane) >= v.len + 2.5 + out * out / 18;
+  if (!fits(plan.outLane)) {                                           // never block the crossing, but: a car going straight
+    const other = v.spec.bike || v.move !== "S" ? null : plan.outLane === "L" ? "S" : plan.out.to === null ? "L" : null;
+    if (!other || !fits(other)) return false;                          // whose lane ahead is full takes the other lane (and
+    Object.assign(plan, { outLane: other, nextMove: plan.out.to === null ? null : "S", path: pathFor(v.seg, v.lane, plan.out, other) });
+  }                                                                    // goes straight on there, not left)
+  // drivers wait while cross traffic or people are still in the crossing (after the lights changed)
+  if (j.zebraPeds > 0) return false;
+  for (const o of j.box) if (o.conn && o !== v && signalFor(j, o.conn.from.head, o.move) !== "G") return false;
+  const seg = v.seg;
+  if (!v.spec.bike && v.move === "R") {   // right turns give way to bikes, once: the next tick the bikes wait for it
+    const crossing = seg.connQ.B.some(b => b.conn.path.len - b.conn.s > 3), waiting = seg.lanes.B.some(b => b.s > seg.len - 14);
+    if (crossing || (waiting && !v.gaveWay)) { v.gaveWay = v.gaveWay || waiting || crossing; return false; }
+  }
+  if (v.spec.bike && seg.connQ.S.some(c => c.move === "R")) return false;   // a car turning right is crossing the bike lane
+  return true;
+}
+
+// ----- the light controllers ----------------------------------------------------------------
+function demand(j, phase) {
+  if (phase === "W") return peopleWaiting(j);
+  const p = PHASES[phase];
+  let n = 0;
+  for (const h of p.heads) {
+    const seg = inSeg(j.id, h);
+    for (const lane of ["L", "S", "B"]) for (const v of seg.lanes[lane])
+      if (p.moves.includes(v.move) && seg.len - v.s < 70) n++;
+  }
+  return n;
+}
+function greenNear(j) {
+  const p = PHASES[j.phase];
+  let n = 0;
+  for (const h of p.heads) {
+    const seg = inSeg(j.id, h);
+    for (const lane of ["L", "S", "B"]) for (const v of seg.lanes[lane])
+      if (p.moves.includes(v.move) && seg.len - v.s < 30) n++;
+  }
+  return n;
+}
+function peopleWaiting(j) { let n = 0; for (const p of people) if (p.waitJ === j.id) n++; return n; }
+// A schedule is a list of {phase, seconds}, run as a cycle. A day plan picks a list by the clock:
+// {"00:00": [...], "07:00": [...], "09:30": [...]}. Phases left out are skipped.
+function currentPlan(j) {
+  const sch = j.schedule;
+  if (!sch) return ORDER.map(phase => ({ phase, seconds: FIXED[phase] }));
+  if (Array.isArray(sch)) return sch;
+  const starts = Object.keys(sch).sort(), now = fmtClock(clock);
+  let key = starts[starts.length - 1];
+  for (const k of starts) if (k <= now) key = k;
+  return sch[key];
+}
+function nextPhase(j) {
+  if (j.mode === "manual") return j.request;
+  if (j.mode === "schedule" || j.mode === "fixed") {
+    const plan = currentPlan(j), i = plan.findIndex(e => e.phase === j.phase);
+    return plan[(i + 1) % plan.length].phase;
+  }
+  const start = ORDER.indexOf(j.phase);
+  for (let k = 1; k <= ORDER.length; k++) {
+    const ph = ORDER[(start + k) % ORDER.length];
+    if (j.mode === "fixed") return ph;
+    const d = demand(j, ph);
+    if (ph === "W" ? d >= 3 || maxPersonWait(j) > 35 : d > 0) return ph;
+  }
+  return null;
+}
+function maxPersonWait(j) { let m = 0; for (const p of people) if (p.waitJ === j.id) m = Math.max(m, p.legWait); return m; }
+function wantsToEnd(j) {
+  if (j.mode === "manual") return j.request && j.request !== j.phase;
+  if (j.mode === "fixed") return j.t >= FIXED[j.phase];
+  if (j.mode === "schedule") { const e = currentPlan(j).find(e => e.phase === j.phase); return !e || j.t >= e.seconds; }
+  const others = ORDER.some(ph => ph !== j.phase && (ph === "W" ? peopleWaiting(j) >= 3 || maxPersonWait(j) > 35 : demand(j, ph) > 0));
+  if (j.phase === "W") return j.t >= 9;
+  if (!others) return false;
+  return j.t >= 30 || (j.t >= 6 && greenNear(j) === 0);
+}
+function stepLight(j, dt) {
+  j.t += dt;
+  if (j.mode === "direct") return;          // lights set from outside (your decide()): nothing changes them here
+  if (j.stage === "green") { if (wantsToEnd(j)) { j.stage = "yellow"; j.t = 0; } }
+  else if (j.stage === "walk") { if (wantsToEnd(j)) { j.stage = "flash"; j.t = 0; } }
+  else if (j.stage === "yellow") { if (j.t >= YELLOW) { j.stage = "allred"; j.t = 0; } }
+  else if (j.stage === "flash") { if (j.t >= FLASH) { j.stage = "allred"; j.t = 0; } }
+  else if (j.stage === "allred") {
+    if (j.t >= ALLRED && j.box.size === 0 && j.zebraPeds === 0) {   // the crossing must be empty
+      const ph = nextPhase(j);
+      if (ph) { j.phase = ph; j.stage = ph === "W" ? "walk" : "green"; j.t = 0; j.serial++; if (j.request === ph) j.request = null; }
+    }
+  }
+}
+
+// ----- people: they walk on the sidewalks and cross on the zebras ----------------------------
+const NODES = [], EDGES = [];
+const node = p => { NODES.push({ p, e: [] }); return NODES.length - 1; };
+function edge(a, b, zebra = null, arm = null) {
+  const len = Math.hypot(NODES[a].p[0] - NODES[b].p[0], NODES[a].p[1] - NODES[b].p[1]);
+  const e = { a, b, len, zebra, arm, id: EDGES.length };
+  EDGES.push(e); NODES[a].e.push(e); NODES[b].e.push(e);
+}
+for (const j of JUNCTIONS) {
+  j.corner = { NW: node([j.x - PO, j.y - PO]), NE: node([j.x + PO, j.y - PO]), SE: node([j.x + PO, j.y + PO]), SW: node([j.x - PO, j.y + PO]) };
+  edge(j.corner.NW, j.corner.NE, j.id, "north"); edge(j.corner.NE, j.corner.SE, j.id, "east");
+  edge(j.corner.SE, j.corner.SW, j.id, "south"); edge(j.corner.SW, j.corner.NW, j.id, "west");
+}
+for (const j of JUNCTIONS) {
+  const right = JUNCTIONS.find(k => k.r === j.r && k.c === j.c + 1), below = JUNCTIONS.find(k => k.c === j.c && k.r === j.r + 1);
+  if (right) { edge(j.corner.NE, right.corner.NW); edge(j.corner.SE, right.corner.SW); }
+  if (below) { edge(j.corner.SW, below.corner.NW); edge(j.corner.SE, below.corner.NE); }
+  if (j.r === 0) { edge(j.corner.NW, node([j.x - PO, -6])); edge(j.corner.NE, node([j.x + PO, -6])); }
+  if (j.r === 1) { edge(j.corner.SW, node([j.x - PO, H + 6])); edge(j.corner.SE, node([j.x + PO, H + 6])); }
+  if (j.c === 0) { edge(j.corner.NW, node([-6, j.y - PO])); edge(j.corner.SW, node([-6, j.y + PO])); }
+  if (j.c === 1) { edge(j.corner.NE, node([W + 6, j.y - PO])); edge(j.corner.SE, node([W + 6, j.y + PO])); }
+}
+// shortest paths between all nodes (crossing a zebra costs a little extra: people prefer not to)
+const N = NODES.length, DIST = [], NEXT = [];
+for (let i = 0; i < N; i++) { DIST.push(new Array(N).fill(Infinity)); NEXT.push(new Array(N).fill(-1)); DIST[i][i] = 0; NEXT[i][i] = i; }
+for (const e of EDGES) { const w = e.len + (e.zebra !== null ? 12 : 0); DIST[e.a][e.b] = DIST[e.b][e.a] = w; NEXT[e.a][e.b] = e.b; NEXT[e.b][e.a] = e.a; }
+for (let k = 0; k < N; k++) for (let i = 0; i < N; i++) for (let jj = 0; jj < N; jj++)
+  if (DIST[i][k] + DIST[k][jj] < DIST[i][jj]) { DIST[i][jj] = DIST[i][k] + DIST[k][jj]; NEXT[i][jj] = NEXT[i][k]; }
+const SIDEWALKS = EDGES.filter(e => e.zebra === null);
+const edgeBetween = (a, b) => NODES[a].e.find(e => e.a === b || e.b === b);
+
+const people = new Set();
+function spawnPerson() {
+  const e1 = pick(SIDEWALKS), e2 = pick(SIDEWALKS);
+  const t1 = 0.1 + rnd() * 0.8, t2 = 0.1 + rnd() * 0.8;
+  const pt = (e, t) => [NODES[e.a].p[0] + (NODES[e.b].p[0] - NODES[e.a].p[0]) * t, NODES[e.a].p[1] + (NODES[e.b].p[1] - NODES[e.a].p[1]) * t];
+  const from = pt(e1, t1), to = pt(e2, t2);
+  let best = null;
+  for (const a of [e1.a, e1.b]) for (const b of [e2.a, e2.b]) {
+    const d = Math.hypot(from[0] - NODES[a].p[0], from[1] - NODES[a].p[1]) + DIST[a][b] + Math.hypot(to[0] - NODES[b].p[0], to[1] - NODES[b].p[1]);
+    if (!best || d < best.d) best = { a, b, d };
+  }
+  const route = [best.a];
+  while (route[route.length - 1] !== best.b) route.push(NEXT[route[route.length - 1]][best.b]);
+  const pts = [from, ...route.map(n => NODES[n].p), to];
+  const legs = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const e = i >= 1 && i < route.length ? edgeBetween(route[i - 1], route[i]) : null;
+    legs.push({ a: pts[i], b: pts[i + 1], len: Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]),
+                zebra: e ? e.zebra : null, arm: e ? e.arm : null });
+  }
+  if (e1 === e2) legs.splice(0, legs.length, { a: from, b: to, len: Math.hypot(to[0] - from[0], to[1] - from[1]), zebra: null });
+  people.add({ legs, i: 0, pos: 0, speed: 1.1 + rnd() * 0.5, side: (rnd() - 0.5) * 1.6, shirt: pick(SHIRTS),
+               jx: (rnd() - 0.5) * 2.2, jy: (rnd() - 0.5) * 2.2, waitJ: null, onZebra: null, wait: 0, legWait: 0, phase: rnd() * 6, k: 0, jf: 0 });
+}
+
+// ----- the clock and how busy the city is ---------------------------------------------------
+let clock = 7.5 * 60;           // minutes since midnight; 1 simulated second = 1 clock minute
+const CLOCK_RATE = 1;
+function busy(min) {
+  const h = (min / 60) % 24;
+  if (h >= 7 && h < 9.5) return 1.0;
+  if (h >= 17 && h < 19.5) return 1.05;
+  if (h >= 23 || h < 6) return 0.18;
+  return 0.6;
+}
+// Rush hours: for one clock hour, many more cars come from one side of the map (cars: the way they drive,
+// E = from the left to the right of the map, N = from the bottom to the top), or a crowd of people walks.
+const WAVES = [
+  { hour: 9, cars: "E", label: "rush: cars from left to right" },
+  { hour: 10, cars: "N", label: "rush: cars from bottom to top" },
+  { hour: 11, cars: "E", label: "rush: cars from left to right" },
+  { hour: 12, people: 4, label: "lunch: a huge crowd walks" },
+  { hour: 13, cars: "W", label: "rush: cars from right to left" },
+  { hour: 14, cars: "S", label: "rush: cars from top to bottom" },
+  { hour: 15, people: 2.5, cars: "N", label: "school is out: people, and cars to the top" },
+  { hour: 16, cars: "E", label: "rush: cars from left to right" },
+  { hour: 17, cars: "WS", label: "home time: cars to the left and to the bottom" },
+  { hour: 18, people: 3, label: "after work: a crowd walks" },
+  { hour: 19, cars: "N", label: "rush: cars from bottom to top" },
+];
+const WAVE_CARS = 2, WAVE_SIDE = 6;   // in a car rush: twice the cars, and their side is 6 times as likely
+const waveAt = min => WAVES.find(w => w.hour === Math.floor(min / 60) % 24) || null;
+
+// ----- the simulation step ----------------------------------------------------------------------
+const DT = 0.05;
+// The tick is the city's beat: at the start of a tick, per lane, the first vehicle at the stop line
+// goes (if it may), and it is fully across the crossing at the end of that tick: exactly 1 tick.
+const TICK = 3;                                  // simulated seconds per tick (3 clock minutes)
+const TICK_STEPS = Math.round(TICK / DT);        // simulation steps per tick
+const AT_LINE = 12;                              // metres: this close to the stop line counts as "at the line"
+let tickStep = 0;                                // steps done in the current tick (0 = a tick starts)
+const stats = { tripsV: 0, tripsP: 0, waitV: 0, waitP: 0, collisions: 0, events: [], cameFrom: { N: 0, S: 0, E: 0, W: 0 }, peopleCame: 0,
+                crossed: 0 };   // vehicles and people that went across a crossing (the live score counts them)
+let spawnV = 0, spawnP = 0;
+
+function idm(v, gap, dv, v0) {
+  const sp = v.spec, s0 = sp.bike ? 1.0 : 2.0;
+  const sStar = s0 + Math.max(0, v.v * 1.2 + v.v * dv / (2 * Math.sqrt(sp.a * sp.b)));
+  return sp.a * (1 - Math.pow(v.v / v0, 4) - Math.pow(sStar / Math.max(gap, 0.05), 2));
+}
+function freeSpeed(v) {
+  const dist = v.seg.to === null ? 1e9 : v.seg.len - v.s;
+  if (v.move && v.move !== "S" && dist < 35) return Math.min(v.spec.v0, (v.move === "L" ? 7 : 5.5) + dist * 0.2);
+  return v.spec.v0;
+}
+
+function stepVehicles(dt) {
+  // 1) accelerations
+  for (const seg of SEGS) for (const lane of ["L", "S", "B"]) {
+    const list = seg.lanes[lane];
+    for (let i = 0; i < list.length; i++) {
+      const v = list[i];
+      let a = idm(v, 1e9, 0, freeSpeed(v));
+      if (i > 0) { const l = list[i - 1]; a = Math.min(a, idm(v, l.s - l.len - v.s, v.v - l.v, freeSpeed(v))); }
+      else if (seg.to !== null) {
+        const q = seg.connQ[lane], dist = seg.len - v.s;
+        if (q.length) { const l = q[q.length - 1]; a = Math.min(a, idm(v, dist + l.conn.s - l.len, v.v - l.v, freeSpeed(v))); }
+        if (dist < 60) a = Math.min(a, idm(v, dist - 0.3, v.v, freeSpeed(v)));   // it goes at a tick: until then, the line
+      }
+      v.acc = Math.max(-9, a);
+    }
+  }
+  // 2) move
+  for (const v of [...vehicles]) {
+    if (v.conn) { crossStep(v); continue; }
+    v.v = Math.max(0, v.v + v.acc * dt);
+    if (v.v < 0.3) { v.wait += dt; v.waitHere += dt; }
+    const seg = v.seg;
+    let ns = v.s + v.v * dt;
+    if (seg.to !== null && ns >= seg.len) { ns = seg.len; v.v = 0; }   // at the stop line: it goes at a tick (startTick)
+    v.s = ns;
+    if (seg.to === null && v.s - v.len > seg.len) {      // left the map
+      seg.lanes[v.lane].splice(seg.lanes[v.lane].indexOf(v), 1);
+      vehicles.delete(v); stats.tripsV++; stats.waitV += v.wait;
+    }
+  }
+}
+
+// A tick starts: per lane, the first vehicle at the stop line goes if it may. Bikes first: right turns give way to them.
+// People at a zebra with the walk light go too: they are across in exactly this tick.
+function startTick() {
+  SEGS.filter(seg => seg.to !== null).forEach(seg => {   // bikes first, unless a right turn already gave way to them
+    (seg.lanes.S[0] && seg.lanes.S[0].gaveWay ? ["S", "B", "L"] : ["B", "S", "L"]).forEach(lane => {
+      const v = seg.lanes[lane][0];
+      if (v && seg.len - v.s <= AT_LINE && mayGo(v)) enter(v);
+    });
+  });
+  people.forEach(p => {
+    const j = p.waitJ !== null && JUNCTIONS[p.waitJ];
+    if (!j || j.stage !== "walk" || j.box.size > 0) return;           // walk, once cars have left
+    countPerson(j, p.legs[p.i].arm, p.legWait); stats.crossed++;
+    p.jf = Math.min(1, p.legWait);                                     // how far it stepped aside while it waited
+    p.waitJ = null; p.legWait = 0; p.onZebra = j.id; p.k = 0; j.zebraPeds++;
+  });
+}
+function enter(v) {
+  const seg = v.seg, j = JUNCTIONS[seg.to], plan = planFor(v);
+  seg.lanes[v.lane].shift();
+  const s0 = v.s - seg.len, D = plan.path.len + v.len + 0.5 - s0;   // from where it stands until its rear is out of the crossing
+  v.conn = { path: plan.path, s: s0, s0, D, k: 0, ...crossProfile(v.v, D, cruiseOf(v)),
+             from: seg, fromLane: v.lane, out: plan.out, outLane: plan.outLane, j: j.id };
+  seg.connQ[v.lane].push(v);
+  j.box.add(v); v.boxJ = j;
+  countVehicle(j, seg.head, v); stats.crossed++;
+}
+const cruiseOf = v => Math.min(v.spec.v0, { S: Infinity, L: 7, R: 5.5 }[v.move]);   // the speed it wants across
+// The speed across a crossing: from the speed it has, smoothly to a cruise speed (as near the speed it
+// wants as fits), then steady, so that it covers exactly D in exactly 1 tick. Never a jump in speed.
+function crossProfile(vIn, D, want) {
+  const avg = D / TICK, far = Math.max(0, 2 * avg - vIn);         // cruise at far: the speed changes over the whole tick
+  const near = avg + 0.3 * (far - avg);                           // at avg it would have to change at once: keep away
+  const vc = Math.min(Math.max(near, far), Math.max(Math.min(near, far), want));
+  const ta = Math.abs(vc - vIn) < 1e-6 ? 0 : 2 * (vc * TICK - D) / (vc - vIn);   // seconds until it cruises
+  return { vIn, vc, ta };
+}
+function crossStep(v) {
+  const c = v.conn, t = TICK * ++c.k / TICK_STEPS;
+  const done = t < c.ta ? c.vIn * t + (c.vc - c.vIn) * t * t / (2 * c.ta) : (c.vIn + c.vc) * c.ta / 2 + c.vc * (t - c.ta);
+  c.s = c.k < TICK_STEPS ? c.s0 + done : c.s0 + c.D;
+  v.v = t < c.ta ? c.vIn + (c.vc - c.vIn) * t / c.ta : c.vc; v.acc = t < c.ta ? (c.vc - c.vIn) / c.ta : 0;
+  if (c.k < TICK_STEPS) return;                                   // after exactly 1 tick it is on the next road
+  const q = c.from.connQ[c.fromLane]; q.splice(q.indexOf(v), 1);
+  const plan = v.plan;
+  v.conn = null; v.plan = null;
+  v.seg = plan.out; v.lane = plan.outLane; v.s = c.s - c.path.len; v.move = plan.nextMove; v.waitHere = 0;
+  const lane = v.seg.lanes[v.lane], i = lane.findIndex(o => o.s < v.s);   // a lane is ordered front first
+  lane.splice(i < 0 ? lane.length : i, 0, v);
+  v.boxJ.box.delete(v); v.boxJ = null;                                    // its rear has left the crossing
+}
+
+function stepPeople(dt) {
+  for (const p of [...people]) {
+    const leg = p.legs[p.i];
+    if (leg.zebra !== null && p.pos === 0 && p.onZebra === null) {   // at a zebra: it goes when a tick starts (startTick)
+      p.waitJ = leg.zebra; p.wait += dt; p.legWait += dt; continue;
+    }
+    const zebra = p.onZebra !== null, speed = zebra ? leg.len / TICK : p.speed;   // a zebra: across in exactly 1 tick
+    p.phase += dt * speed * 3;
+    p.pos = zebra ? leg.len * ++p.k / TICK_STEPS : p.pos + speed * dt;
+    if (zebra ? p.k >= TICK_STEPS : p.pos >= leg.len) {
+      if (p.onZebra !== null) { JUNCTIONS[p.onZebra].zebraPeds--; p.onZebra = null; }
+      p.i++; p.pos = 0;
+      if (p.i >= p.legs.length) { people.delete(p); stats.tripsP++; stats.waitP += p.wait; }
+    }
+  }
+}
+
+function entryFor(wave) {   // where a new vehicle comes in: in a car rush, mostly on the rush's side
+  const weights = ENTRIES.map(s => wave && wave.cars && wave.cars.includes(s.head) ? WAVE_SIDE : 1);
+  let r = rnd() * weights.reduce((a, w) => a + w, 0);
+  return ENTRIES.find((s, i) => (r -= weights[i]) < 0) || ENTRIES[ENTRIES.length - 1];
+}
+function spawn(dt) {
+  const b = busy(clock), wave = waveAt(clock);
+  spawnV += dt * b * 0.95 * (wave && wave.cars ? WAVE_CARS : 1);   // vehicles per second over the whole map
+  while (spawnV >= 1) {
+    spawnV -= 1;
+    const seg = entryFor(wave), v = makeVehicle(randomType());
+    seg.backlog.push(v); stats.cameFrom[seg.head]++;
+  }
+  for (const seg of ENTRIES) {
+    if (!seg.backlog.length) continue;
+    const v = seg.backlog[0];
+    const lane = seg.lanes[v.spec.bike ? "B" : "S"], tail = lane.length ? lane[lane.length - 1] : null;
+    const laneL = seg.lanes.L, tailL = laneL.length ? laneL[laneL.length - 1] : null;
+    v.seg = seg;
+    v.move = randomMove(v.spec.bike);
+    const want = laneFor(v, seg), t = want === "L" ? tailL : tail;
+    if (t && t.s - t.len < v.len + 3) continue;          // no room yet: it waits at the edge of the map
+    seg.backlog.shift();
+    v.lane = want; v.s = 0; v.v = Math.min(v.spec.v0, t ? Math.max(0, t.v) : v.spec.v0) * 0.8;
+    seg.lanes[want].push(v); vehicles.add(v);
+  }
+  const crowd = wave && wave.people ? wave.people : 1;
+  spawnP += dt * b * 0.8 * crowd;
+  while (spawnP >= 1) { spawnP -= 1; if (people.size < 260 * crowd) { spawnPerson(); stats.peopleCame++; } }
+}
+
+// ----- safety check: nothing may overlap, and no car may be on a zebra while people walk ----------
+function shape(v) {
+  let x, y, a;
+  if (v.conn) {
+    const c = v.conn, back = c.s - v.len / 2;
+    if (back > c.path.len) { const p = lanePoint(c.out, back - c.path.len, c.outLane); x = p[0]; y = p[1]; const d = DIRS[c.out.head]; a = Math.atan2(d[1], d[0]); }
+    else if (back >= 0) [x, y, a] = along(c.path, back);
+    else { const p = lanePoint(c.from, c.from.len + back, c.fromLane); x = p[0]; y = p[1]; const d = DIRS[c.from.head]; a = Math.atan2(d[1], d[0]); }
+  } else {
+    const p = lanePoint(v.seg, v.s - v.len / 2, v.lane), d = DIRS[v.seg.head];
+    x = p[0]; y = p[1]; a = Math.atan2(d[1], d[0]);
+  }
+  return { x, y, a };
+}
+function circles(v, sh) {
+  const n = Math.max(1, Math.round(v.len / v.spec.w)), out = [];
+  for (let i = 0; i < n; i++) {
+    const k = (i + 0.5) / n - 0.5;
+    out.push([sh.x + Math.cos(sh.a) * k * v.len, sh.y + Math.sin(sh.a) * k * v.len, v.spec.w / 2]);
+  }
+  return out;
+}
+function checkSafety() {
+  for (const j of JUNCTIONS) {
+    const list = [...j.box].map(v => ({ v, c: circles(v, shape(v)) }));
+    for (let i = 0; i < list.length; i++) for (let k = i + 1; k < list.length; k++) {
+      let hit = false;
+      for (const p of list[i].c) for (const q of list[k].c) if (Math.hypot(p[0] - q[0], p[1] - q[1]) < p[2] + q[2] - 0.35) hit = true;
+      if (hit) { stats.collisions++; if (stats.events.length < 20) stats.events.push({ j: j.id, a: list[i].v.type + list[i].v.move + "@" + (list[i].v.conn ? list[i].v.conn.from.head + (list[i].v.conn.s).toFixed(1) : "out" + list[i].v.seg.head + list[i].v.s.toFixed(1)), b: list[k].v.type + list[k].v.move + "@" + (list[k].v.conn ? list[k].v.conn.from.head + (list[k].v.conn.s).toFixed(1) : "out" + list[k].v.seg.head + list[k].v.s.toFixed(1)), clock }); }
+    }
+    if (j.zebraPeds > 0 && j.box.size > 0) { stats.collisions++; if (stats.events.length < 20) stats.events.push({ j: j.id, a: "people on zebra", b: "vehicle in crossing", clock }); }
+  }
+}
+
+let simSteps = 0;     // steps the simulation has run
+let step = function (dt) {
+  simSteps++;
+  clock = (clock + dt * CLOCK_RATE) % (24 * 60);
+  spawn(dt);
+  for (const j of JUNCTIONS) stepLight(j, dt);
+  if (tickStep === 0) startTick();
+  tickStep = (tickStep + 1) % TICK_STEPS;
+  stepVehicles(dt);
+  stepPeople(dt);
+  checkSafety();
+};
+
+
+// =============================================================================================
+// Drawing
+// =============================================================================================
+const canvas = document.getElementById("c"), ctx = canvas.getContext("2d");
+const view = { zoom: 1, cx: W / 2, cy: H / 2 };
+let cssW = 0, cssH = 0, dpr = 1, selected = 0;
+function resize() {
+  const r = canvas.getBoundingClientRect();
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  cssW = r.width; cssH = r.height;
+  canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+}
+const scale = () => cssW / W * view.zoom;
+function toWorld(px, py) { const s = scale(); return [(px - cssW / 2) / s + view.cx, (py - cssH / 2) / s + view.cy]; }
+
+// ----- the city that does not move: planned once, then painted (2D) or built (3D) -------------
+const ROOFS = ["#8d96a3", "#a3a8ad", "#b9a99a", "#7f8b92", "#9fa6b5", "#c0b3a3", "#6f7a86", "#a9b3a0", "#b8bec7", "#8f8277"];
+const TREE_COLORS = ["#3f7d3a", "#4a8a3f", "#356f33", "#5b9a48"];
+const BUILDINGS = [], TREES = [], LOTS = [];
+let PARK = null;
+(function planCity() {
+  const xb = [0, ...XS.flatMap(x => [x - HW - WALK, x + HW + WALK]), W], yb = [0, ...YS.flatMap(y => [y - HW - WALK, y + HW + WALK]), H];
+  for (let bi = 0; bi < xb.length; bi += 2) for (let bj = 0; bj < yb.length; bj += 2) {
+    const x0 = xb[bi], x1 = xb[bi + 1], y0 = yb[bj], y1 = yb[bj + 1];
+    if (bi === 2 && bj === 2) {                                         // the middle block is a park
+      PARK = { x0, y0, x1, y1, pond: [x0 + (x1 - x0) * 0.68, y0 + (y1 - y0) * 0.3, 14, 8, 0.3] };
+      for (let i = 0; i < 70; i++) {
+        const x = x0 + 3 + lrnd() * (x1 - x0 - 6), y = y0 + 3 + lrnd() * (y1 - y0 - 6);
+        if (Math.hypot((x - PARK.pond[0]) / 16, (y - PARK.pond[1]) / 10) < 1) continue;
+        TREES.push({ x, y, r: 1.8 + lrnd() * 2.6, color: pick(TREE_COLORS, lrnd) });
+      }
+      continue;
+    }
+    LOTS.push({ x0, y0, x1, y1 });
+    const pad = 2.5;
+    let x = x0 + pad;
+    while (x < x1 - pad - 6) {
+      const w = Math.min(x1 - pad - x, 12 + lrnd() * 22);
+      let y = y0 + pad;
+      while (y < y1 - pad - 6) {
+        const h = Math.min(y1 - pad - y, 10 + lrnd() * 20);
+        if (lrnd() < 0.12) { TREES.push({ x: x + w / 2, y: y + h / 2, r: 3 + lrnd() * 2, color: pick(TREE_COLORS, lrnd) }); y += h + 1.5; continue; }
+        const floors = 3 + Math.floor(lrnd() * 18), boxes = [];
+        for (let k = 0; k < 1 + floors / 6; k++) boxes.push([x + 1.5 + lrnd() * (w - 4.5), y + 1.5 + lrnd() * (h - 4.5), 1.6 + lrnd() * 1.4, 1.2 + lrnd()]);
+        BUILDINGS.push({ x, y, w, h, floors, roof: pick(ROOFS, lrnd), boxes, style: Math.floor(lrnd() * 4), lit: lrnd() });
+        y += h + 1.5;
+      }
+      x += w + 1.5;
+    }
+    for (let k = x0 + 4; k < x1 - 2; k += 9) {                         // street trees
+      TREES.push({ x: k, y: y0 + 1.2, r: 1.5, color: pick(TREE_COLORS, lrnd), street: true });
+      TREES.push({ x: k, y: y1 - 1.2, r: 1.5, color: pick(TREE_COLORS, lrnd), street: true });
+    }
+  }
+})();
+
+const BG_PPM = 5, bg = document.createElement("canvas");
+bg.width = W * BG_PPM; bg.height = H * BG_PPM;
+// objects = true: buildings and trees seen from above (the 2D map); false: only the ground (3D view)
+function paintGround(canvasEl, objects) {
+  const g = canvasEl.getContext("2d");
+  g.setTransform(canvasEl.width / W, 0, 0, canvasEl.height / H, 0, 0);
+  g.fillStyle = "#c9cdc4"; g.fillRect(0, 0, W, H);                    // pavement
+  for (const l of LOTS) { g.fillStyle = "#b9bdb5"; g.fillRect(l.x0, l.y0, l.x1 - l.x0, l.y1 - l.y0); }
+  const P = PARK;
+  g.fillStyle = "#6f9a5b"; g.fillRect(P.x0, P.y0, P.x1 - P.x0, P.y1 - P.y0);
+  g.strokeStyle = "#d8cfb4"; g.lineWidth = 2.2;
+  g.beginPath(); g.moveTo(P.x0, (P.y0 + P.y1) / 2); g.bezierCurveTo(P.x0 + 40, P.y0 + 20, P.x1 - 40, P.y1 - 20, P.x1, (P.y0 + P.y1) / 2); g.stroke();
+  g.beginPath(); g.moveTo((P.x0 + P.x1) / 2, P.y0); g.lineTo((P.x0 + P.x1) / 2 + 10, P.y1); g.stroke();
+  g.fillStyle = "#5aa3c9"; g.beginPath(); g.ellipse(...P.pond, 0, 7); g.fill();
+  g.strokeStyle = "rgba(255,255,255,.4)"; g.lineWidth = 0.4; g.stroke();
+  g.fillStyle = "rgba(255,255,255,.75)"; g.font = "600 3px system-ui"; g.textAlign = "center"; g.fillText("City Park", (P.x0 + P.x1) / 2 - 18, P.y1 - 6);
+  if (objects) {
+    for (const b of BUILDINGS) {
+      const sh = 0.6 + b.floors * 0.12;
+      g.fillStyle = "rgba(0,0,0,.22)"; g.fillRect(b.x + sh, b.y + sh, b.w, b.h);
+      g.fillStyle = b.roof; g.fillRect(b.x, b.y, b.w, b.h);
+      g.strokeStyle = "rgba(255,255,255,.18)"; g.lineWidth = 0.25; g.strokeRect(b.x + 0.6, b.y + 0.6, b.w - 1.2, b.h - 1.2);
+      g.fillStyle = "rgba(40,45,52,.35)"; for (const r of b.boxes) g.fillRect(...r);
+    }
+    for (const t of TREES) tree(g, t.x, t.y, t.r, t.color);
+  } else {
+    for (const b of BUILDINGS) { g.fillStyle = "rgba(0,0,0,.18)"; g.fillRect(b.x - 0.4, b.y - 0.4, b.w + 0.8, b.h + 0.8); }  // footprints
+  }
+  // roads
+  g.fillStyle = "#3a4048";
+  for (const y of YS) g.fillRect(-1, y - HW, W + 2, HW * 2);
+  for (const x of XS) g.fillRect(x - HW, -1, HW * 2, H + 2);
+  // bike lanes (green), lane lines, the centre line
+  for (const seg of SEGS) {
+    const d = DIRS[seg.head], r = rightOf(d);
+    const p0 = add(seg.start, r, OFF.B), p1 = add(add(seg.start, d, seg.len), r, OFF.B);
+    g.strokeStyle = "#2f6b4f"; g.lineWidth = BIKE; g.beginPath(); g.moveTo(...p0); g.lineTo(...p1); g.stroke();
+    for (let s = 6; s < seg.len - 6; s += 22) {                        // little bike signs
+      const p = lanePoint(seg, s, "B");
+      g.save(); g.translate(p[0], p[1]); g.rotate(Math.atan2(d[1], d[0])); g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 0.15;
+      g.beginPath(); g.arc(-0.45, 0, 0.32, 0, 7); g.moveTo(0.77, 0); g.arc(0.45, 0, 0.32, 0, 7); g.moveTo(-0.45, 0); g.lineTo(0, -0.1); g.lineTo(0.45, 0); g.stroke(); g.restore();
+    }
+    const dash = (off, color, w, on, gap) => {
+      g.strokeStyle = color; g.lineWidth = w; g.setLineDash(on ? [on, gap] : []);
+      g.beginPath(); g.moveTo(...add(seg.start, r, off)); g.lineTo(...add(add(seg.start, d, seg.len), r, off)); g.stroke(); g.setLineDash([]);
+    };
+    dash(MED + LANE, "rgba(240,240,240,.7)", 0.15, 3, 4);
+    dash(MED + 2 * LANE, "rgba(240,240,240,.85)", 0.15, 0, 0);
+    dash(0.1, "#e7b416", 0.15, 0, 0);
+    if (seg.to !== null) {                                              // stop line and lane arrows
+      const e = add(seg.start, d, seg.len);
+      g.strokeStyle = "#f2f2f2"; g.lineWidth = 0.45;
+      g.beginPath(); g.moveTo(...add(e, r, 0.1)); g.lineTo(...add(e, r, HW)); g.stroke();
+      arrow(g, lanePoint(seg, seg.len - 7, "L"), d, "L"); arrow(g, lanePoint(seg, seg.len - 7, "S"), d, "SR");
+    }
+  }
+  // crossings: asphalt box and zebras
+  for (const j of JUNCTIONS) {
+    g.fillStyle = "#3a4048"; g.fillRect(j.x - HW, j.y - HW, HW * 2, HW * 2);
+    g.fillStyle = "rgba(255,255,255,.88)";
+    for (let k = -HW + 0.4; k < HW - 0.3; k += 1.1) {
+      g.fillRect(j.x + k, j.y - ZEB[1], 0.6, ZEB[1] - ZEB[0]); g.fillRect(j.x + k, j.y + ZEB[0], 0.6, ZEB[1] - ZEB[0]);
+      g.fillRect(j.x - ZEB[1], j.y + k, ZEB[1] - ZEB[0], 0.6); g.fillRect(j.x + ZEB[0], j.y + k, ZEB[1] - ZEB[0], 0.6);
+    }
+    g.strokeStyle = "rgba(255,255,255,.18)"; g.lineWidth = 0.12; g.setLineDash([0.8, 0.8]); g.strokeRect(j.x - HW + 0.3, j.y - HW + 0.3, HW * 2 - 0.6, HW * 2 - 0.6); g.setLineDash([]);
+  }
+  // road names
+  g.fillStyle = "rgba(255,255,255,.55)"; g.font = "600 2.6px system-ui"; g.textAlign = "center"; g.textBaseline = "middle";
+  STREETS.forEach((n, i) => { g.fillText(n, W / 2, YS[i] - OFF.S - 0.2); g.fillText(n, 30, YS[i] + OFF.S); });
+  AVENUES.forEach((n, i) => { g.save(); g.translate(XS[i] + OFF.S, H / 2 + 50); g.rotate(-Math.PI / 2); g.fillText(n, 0, 0); g.restore(); g.save(); g.translate(XS[i] - OFF.S, 30); g.rotate(Math.PI / 2); g.fillText(n, 0, 0); g.restore(); });
+}
+function drawStatic() { paintGround(bg, true); }
+function arrow(g, p, d, kind) {
+  g.save(); g.translate(p[0], p[1]); g.rotate(Math.atan2(d[1], d[0])); g.strokeStyle = "rgba(255,255,255,.75)"; g.lineWidth = 0.22; g.lineCap = "round";
+  g.beginPath(); g.moveTo(-1.6, 0); g.lineTo(0.6, 0);
+  if (kind === "L") { g.quadraticCurveTo(1.4, 0, 1.4, -0.9); g.moveTo(1.0, -0.5); g.lineTo(1.4, -0.95); g.lineTo(1.8, -0.5); }
+  else { g.lineTo(1.6, 0); g.moveTo(1.1, -0.45); g.lineTo(1.6, 0); g.lineTo(1.1, 0.45); g.moveTo(0.2, 0); g.quadraticCurveTo(1, 0, 1, 0.9); }
+  g.stroke(); g.restore();
+}
+function tree(g, x, y, r, color) {
+  g.fillStyle = "rgba(0,0,0,.2)"; g.beginPath(); g.arc(x + r * 0.35, y + r * 0.35, r, 0, 7); g.fill();
+  g.fillStyle = color; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+  g.fillStyle = "rgba(255,255,255,.12)"; g.beginPath(); g.arc(x - r * 0.3, y - r * 0.3, r * 0.45, 0, 7); g.fill();
+}
+
+// moving things
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function drawVehicle(sh, night) {
+  const v = sh.v, L = v.len, Wd = v.spec.w;
+  ctx.save(); ctx.translate(sh.x, sh.y); ctx.rotate(sh.a);
+  if (v.spec.bike) {
+    const c = v.type === "bike" ? "#ff9f1c" : "#2b2f36";
+    ctx.fillStyle = c; roundRect(-L / 2, -Wd / 2, L, Wd, Wd / 2); ctx.fill();
+    ctx.fillStyle = v.rider; ctx.beginPath(); ctx.ellipse(-0.1, 0, 0.35, 0.45, 0, 0, 7); ctx.fill();       // rider
+    ctx.fillStyle = v.type === "scooter" ? pick(["#fff", "#e63946", "#1d3557", "#ffb703"], () => (v.id % 4) / 4) : "#333";
+    ctx.beginPath(); ctx.arc(0.05, 0, 0.24, 0, 7); ctx.fill();                                                // helmet
+    if (night) { ctx.fillStyle = "#fff6c4"; ctx.beginPath(); ctx.arc(L / 2, 0, 0.18, 0, 7); ctx.fill(); }
+  } else {
+    ctx.fillStyle = "rgba(0,0,0,.28)"; roundRect(-L / 2 + 0.25, -Wd / 2 + 0.25, L, Wd, 0.6); ctx.fill();       // shadow
+    const body = v.type === "taxi" ? "#ffd23f" : v.type === "bus" ? "#f4f6f8" : v.color;
+    ctx.fillStyle = body; roundRect(-L / 2, -Wd / 2, L, Wd, v.type === "bus" ? 0.5 : 0.7); ctx.fill();
+    if (v.type === "bus") {
+      ctx.fillStyle = "#3d7bd9"; ctx.fillRect(-L / 2, -Wd / 2, L, 0.35); ctx.fillRect(-L / 2, Wd / 2 - 0.35, L, 0.35);
+      ctx.fillStyle = "#26323f"; for (let k = -L / 2 + 1.2; k < L / 2 - 1.5; k += 1.6) ctx.fillRect(k, -Wd / 2 + 0.45, 1.2, Wd - 0.9);
+      ctx.fillStyle = "#1c2733"; ctx.fillRect(L / 2 - 1.0, -Wd / 2 + 0.3, 0.7, Wd - 0.6);
+      if (view.zoom > 2.2) { ctx.fillStyle = "#fff"; ctx.font = "bold 1px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(v.bus, 0, 0); }
+    } else {
+      ctx.fillStyle = "rgba(20,28,38,.85)";
+      roundRect(L * 0.08, -Wd / 2 + 0.22, L * 0.2, Wd - 0.44, 0.3); ctx.fill();                       // windscreen
+      roundRect(-L * 0.38, -Wd / 2 + 0.28, L * 0.13, Wd - 0.56, 0.25); ctx.fill();                    // rear window
+      ctx.fillStyle = "rgba(255,255,255,.14)"; ctx.fillRect(-L * 0.25, -Wd / 2 + 0.3, L * 0.33, Wd - 0.6);  // roof shine
+      if (v.type === "taxi") { ctx.fillStyle = "#fff"; ctx.fillRect(-0.4, -0.35, 0.6, 0.7); }
+    }
+    ctx.fillStyle = sh.braking ? "#ff2b3a" : "rgba(160,20,30,.8)";
+    ctx.fillRect(-L / 2, -Wd / 2 + 0.15, 0.22, 0.45); ctx.fillRect(-L / 2, Wd / 2 - 0.6, 0.22, 0.45);
+    if (night) { ctx.fillStyle = "#fff8d0"; ctx.fillRect(L / 2 - 0.2, -Wd / 2 + 0.15, 0.22, 0.45); ctx.fillRect(L / 2 - 0.2, Wd / 2 - 0.6, 0.22, 0.45); }
+  }
+  ctx.restore();
+}
+function personPos(p) {
+  const leg = p.legs[p.i];
+  const f = leg.len ? p.pos / leg.len : 0, dx = (leg.b[0] - leg.a[0]) / (leg.len || 1), dy = (leg.b[1] - leg.a[1]) / (leg.len || 1);
+  const side = leg.zebra !== null ? p.side * 0.7 : p.side;
+  // waiting at a zebra: it steps aside to its own spot (over a second); crossing: back in line in the first steps
+  const aside = p.waitJ !== null ? Math.min(1, p.legWait) : p.onZebra !== null ? p.jf * Math.max(0, 1 - f / 0.15) : 0;
+  return [leg.a[0] + (leg.b[0] - leg.a[0]) * f - dy * side + p.jx * aside, leg.a[1] + (leg.b[1] - leg.a[1]) * f + dx * side + p.jy * aside,
+          Math.atan2(dy, dx)];
+}
+function drawPerson(sh) {
+  const p = sh.p, step = sh.walking ? Math.sin(sh.phase) * 0.18 : 0;
+  ctx.save(); ctx.translate(sh.x, sh.y); ctx.rotate(sh.a); ctx.scale(1.5, 1.5);
+  ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(0.12, 0.12, 0.42, 0.3, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = "#2b2b33"; ctx.fillRect(step - 0.08, -0.22, 0.16, 0.12); ctx.fillRect(-step - 0.08, 0.1, 0.16, 0.12);   // feet
+  ctx.fillStyle = p.shirt; ctx.beginPath(); ctx.ellipse(0, 0, 0.26, 0.42, 0, 0, 7); ctx.fill();                       // body
+  ctx.fillStyle = "#3a2a20"; ctx.beginPath(); ctx.arc(0.02, 0, 0.2, 0, 7); ctx.fill();                                // head
+  ctx.restore();
+}
+// ----- what the lights let go: per movement a flat band from the lane before the stop line, along its path
+// through the crossing, into the next road (with an arrowhead); per zebra a band for the people. Both views
+// tint the bands of the lights on screen: green, amber while yellow (or the walk light is ending).
+const APPROACH = 26, EXIT = 4;
+function band(line, w, arrow) {         // the left and right edges of a band of width w along a line, and its arrowhead
+  const side = line.map((p, i) => {     // left of the way along (y points down: left of east is north)
+    const a = line[Math.max(0, i - 1)], b = line[Math.min(line.length - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    return [(b[1] - a[1]) / l, (a[0] - b[0]) / l];
+  });
+  const left = line.map((p, i) => add(p, side[i], w / 2)), right = line.map((p, i) => add(p, side[i], -w / 2));
+  const n = line.length, end = line[n - 1], back = line[n - 2], l = Math.hypot(end[0] - back[0], end[1] - back[1]);
+  const tip = arrow ? [add(end, side[n - 1], w * 0.8), add(end, [(end[0] - back[0]) / l, (end[1] - back[1]) / l], w * 1.1), add(end, side[n - 1], -w * 0.8)] : null;
+  return { left, right, tip, outline: [...left, ...(tip || []), ...[...right].reverse()] };
+}
+const GREENS = JUNCTIONS.flatMap(j => [
+  ...["N", "S", "E", "W"].flatMap(head => [["S", "S"], ["S", "R"], ["L", "L"], ["B", "S"], ["B", "R"]].map(([lane, move]) => {
+    const seg = inSeg(j.id, head), out = outSeg(j.id, TURN[head][move]), path = pathFor(seg, lane, out, lane);
+    return { j, head, move, key: `${j.id}:${head}:${lane === "B" ? "B" : ""}${move}`,
+             ...band([lanePoint(seg, seg.len - APPROACH, lane), ...path.pts, lanePoint(out, EXIT, lane)], lane === "B" ? 1.3 : 2.4, true) };
+  })),
+  ...[["north", 0, -1], ["east", 1, 0], ["south", 0, 1], ["west", -1, 0]].map(([arm, dx, dy]) => ({ j, arm, key: `${j.id}:walk:${arm}`,
+    ...band([[j.x + dx * PO - dy * HW, j.y + dy * PO + dx * HW], [j.x + dx * PO + dy * HW, j.y + dy * PO - dx * HW]], ZEB[1] - ZEB[0], false) })),
+]);
+function greenOf(g) {                   // "G" or "Y" while the lights let it go, else null (read while drawing: the lights on screen)
+  if (g.arm) return g.j.stage === "walk" ? "G" : g.j.stage === "flash" ? "Y" : null;
+  const s = signalFor(g.j, g.head, g.move);
+  return s === "R" ? null : s;
+}
+const TINT = { G: "rgba(47,210,122,.3)", Y: "rgba(255,176,32,.3)" };
+function drawGreens() {                 // one fill per colour, so where bands overlap the tint is not doubled
+  const lit = GREENS.map(g => [g, greenOf(g)]).filter(([, c]) => c);
+  ["G", "Y"].forEach(c => {
+    const on = lit.filter(([, k]) => k === c);
+    if (!on.length) return;
+    ctx.fillStyle = TINT[c]; ctx.beginPath();
+    on.forEach(([g]) => g.outline.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+    ctx.fill();
+  });
+}
+const LAMP = { G: "#2fd27a", Y: "#ffb020", R: "#ff4d55" };
+function drawSignals() {
+  for (const j of JUNCTIONS) {
+    for (const head of ["N", "S", "E", "W"]) {
+      const seg = inSeg(j.id, head), d = DIRS[head], r = rightOf(d);
+      const p = add(add(seg.start, d, seg.len + 0.6), r, HW + 1.2);
+      ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(Math.atan2(d[1], d[0]));
+      ctx.fillStyle = "#11161c"; roundRect(-0.6, -1.55, 1.2, 3.1, 0.3); ctx.fill();
+      const main = signalFor(j, head, "S"), left = signalFor(j, head, "L");
+      ctx.fillStyle = LAMP[main]; ctx.beginPath(); ctx.arc(0, 0.7, 0.45, 0, 7); ctx.fill();
+      ctx.fillStyle = LAMP[left]; ctx.beginPath(); ctx.arc(0, -0.7, 0.45, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#11161c"; ctx.lineWidth = 0.14; ctx.beginPath(); ctx.moveTo(0.25, -0.7); ctx.lineTo(-0.2, -0.7); ctx.lineTo(0.02, -0.95); ctx.stroke();
+      ctx.restore();
+    }
+    // walk signals on the four corners
+    const walk = j.stage === "walk", flash = j.stage === "flash" && Math.floor(performance.now() / 300) % 2;
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const x = j.x + sx * (HW + 1.0), y = j.y + sy * (HW + 1.0);
+      ctx.fillStyle = "#11161c"; ctx.beginPath(); ctx.arc(x, y, 0.75, 0, 7); ctx.fill();
+      ctx.fillStyle = walk || flash ? "#2fd27a" : "#ff4d55"; ctx.beginPath(); ctx.arc(x, y, 0.5, 0, 7); ctx.fill();
+    }
+    ctx.font = "800 6px system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineWidth = 1.6;
+    ctx.strokeStyle = "rgba(11,15,20,.85)"; ctx.fillStyle = "#fff";                        // its id: the key in decide()'s answer
+    ctx.strokeText(`#${j.id}`, j.x - STOP - 6, j.y - STOP - 6); ctx.fillText(`#${j.id}`, j.x - STOP - 6, j.y - STOP - 6);
+    if (j.id === selected) {
+      ctx.strokeStyle = "rgba(106,169,255,.9)"; ctx.lineWidth = 0.5; ctx.setLineDash([1.5, 1]);
+      ctx.strokeRect(j.x - STOP, j.y - STOP, STOP * 2, STOP * 2); ctx.setLineDash([]);
+    }
+  }
+}
+function darkness() {
+  const h = (clock / 60) % 24;
+  if (h >= 6.5 && h <= 17.5) return 0;
+  if (h > 17.5 && h < 19.5) return (h - 17.5) / 2 * 0.55;
+  if (h >= 5 && h < 6.5) return (6.5 - h) / 1.5 * 0.55;
+  return 0.55;
+}
+function draw() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = "#1b2430"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const s = scale() * dpr;
+  ctx.setTransform(s, 0, 0, s, dpr * cssW / 2 - view.cx * s, dpr * cssH / 2 - view.cy * s);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(bg, 0, 0, W, H);
+  drawGreens();
+  const dark = darkness(), night = dark > 0.25;
+  shown.people.forEach(drawPerson);
+  shown.vehicles.forEach(sh => drawVehicle(sh, night));
+  drawSignals();
+  if (dark > 0) {
+    ctx.fillStyle = `rgba(8,12,30,${dark})`; ctx.fillRect(-50, -50, W + 100, H + 100);
+    ctx.globalCompositeOperation = "lighter";
+    for (const j of JUNCTIONS) for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {      // street lamps
+      const x = j.x + sx * (HW + 2), y = j.y + sy * (HW + 2), gr = ctx.createRadialGradient(x, y, 0, x, y, 14);
+      gr.addColorStop(0, `rgba(255,214,140,${0.35 * dark})`); gr.addColorStop(1, "rgba(255,214,140,0)");
+      ctx.fillStyle = gr; ctx.fillRect(x - 14, y - 14, 28, 28);
+    }
+    for (const sh of shown.vehicles) {                                                            // headlights
+      const v = sh.v, hx = sh.x + Math.cos(sh.a) * (v.len / 2 + 4), hy = sh.y + Math.sin(sh.a) * (v.len / 2 + 4);
+      const gr = ctx.createRadialGradient(hx, hy, 0, hx, hy, v.spec.bike ? 3 : 5.5);
+      gr.addColorStop(0, `rgba(255,240,190,${0.32 * dark})`); gr.addColorStop(1, "rgba(255,240,190,0)");
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(hx, hy, v.spec.bike ? 3 : 5.5, 0, 7); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+    drawSignals();                                                                                // lights stay bright
+  }
+}
+
+// =============================================================================================
+// The side panel and controls
+// =============================================================================================
+const el = id => document.getElementById(id);
+function buildPanel() {
+  el("junctions").innerHTML = JUNCTIONS.map(j => `
+    <div class="card" id="j${j.id}">
+      <div class="jhead"><span class="jname"><span class="jid" title="its id: the key in decide()'s answer">#${j.id}</span> ${j.name}</span><span class="phase" id="ph${j.id}"></span></div>
+      <select data-j="${j.id}" class="mode" aria-label="Controller of ${j.name}">
+        <option value="fixed">Fixed timer</option><option value="smart">Smart (reacts to queues)</option><option value="manual">Manual (you)</option><option value="schedule">Schedule (from code)</option>
+      </select>
+      <div class="btns">${ORDER.map(p => `<button data-j="${j.id}" data-p="${p}" title="${PHASES[p].label}">${p}</button>`).join("")}</div>
+      <div class="row"><span id="jw${j.id}"></span><span id="jt${j.id}"></span></div>
+      <div class="row"><span id="js${j.id}"></span></div>
+    </div>`).join("");
+  document.querySelectorAll("select.mode").forEach(s => {
+    s.value = JUNCTIONS[+s.dataset.j].mode;
+    s.onchange = () => { const j = JUNCTIONS[+s.dataset.j]; j.mode = s.value; j.request = null; el("allMode").value = ""; };
+  });
+  document.querySelectorAll(".btns button").forEach(b => b.onclick = () => {
+    const j = JUNCTIONS[+b.dataset.j];
+    j.mode = "manual"; j.request = b.dataset.p; selected = j.id;
+    document.querySelector(`select.mode[data-j="${j.id}"]`).value = "manual";
+  });
+  document.querySelectorAll("#junctions .card").forEach((c, i) => c.onclick = () => { selected = i; });
+}
+function updatePanel() {
+  const h = Math.floor(clock / 60), m = Math.floor(clock % 60);
+  el("clock").textContent = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  const wave = waveAt(clock);
+  el("wave").textContent = wave ? `${String(wave.hour).padStart(2, "0")}:00 ${wave.label}` : "";
+  el("sVeh").textContent = vehicles.size;
+  el("sPed").textContent = people.size;
+  el("sTrips").textContent = `${stats.tripsV} · ${stats.tripsP}`;
+  let wv = 0; for (const v of vehicles) if (v.v < 0.3) wv++;
+  let wp = 0; for (const p of people) if (p.waitJ !== null) wp++;
+  el("sWait").textContent = `${wv} · ${wp}`;
+  el("sVW").textContent = `${stats.tripsV ? (stats.waitV / stats.tripsV).toFixed(1) : 0} s`;
+  el("sPW").textContent = `${stats.tripsP ? (stats.waitP / stats.tripsP).toFixed(1) : 0} s`;
+  el("sCol").textContent = stats.collisions; el("sCol").className = stats.collisions ? "bad" : "ok";
+  for (const j of JUNCTIONS) {
+    const lab = el("ph" + j.id);
+    const color = j.stage === "green" || j.stage === "walk" ? "green" : j.stage === "yellow" || j.stage === "flash" ? "yellow" : "red";
+    lab.className = "phase " + color;
+    lab.textContent = j.stage === "allred" ? (j.mode === "direct" ? "all red (waiting for decide())" : `all red → ${j.request || "next"}`) : `${j.phase} · ${PHASES[j.phase].label}${j.stage === "yellow" ? " (yellow)" : j.stage === "flash" ? " (hurry)" : ""}`;
+    let q = 0; for (const head of "NSEW") { const seg = inSeg(j.id, head); for (const l of ["L", "S", "B"]) for (const v of seg.lanes[l]) if (v.v < 0.3 && seg.len - v.s < 80) q++; }
+    el("jw" + j.id).textContent = `waiting: ${q} vehicles · ${peopleWaiting(j)} people`;
+    el("jt" + j.id).textContent = `${Math.floor(j.t)} s`;
+    el("js" + j.id).textContent = el("js" + j.id).dataset.live ? "lights set by your decide()"
+      : j.mode === "schedule" || j.mode === "fixed" ? "cycle: " + currentPlan(j).map(e => e.phase + e.seconds).join(" ") : "";
+    document.querySelectorAll(`.btns button[data-j="${j.id}"]`).forEach(b => {
+      b.className = b.dataset.p === j.phase && (j.stage === "green" || j.stage === "walk") ? "on" : b.dataset.p === j.request ? "req" : "";
+    });
+    el("j" + j.id).classList.toggle("sel", j.id === selected);
+  }
+}
+el("allMode").onchange = e => { if (!e.target.value) return; for (const j of JUNCTIONS) { j.mode = e.target.value; j.request = null; } document.querySelectorAll("select.mode").forEach(s => s.value = e.target.value); };
+let playing = !params.has("paused");
+el("play").textContent = playing ? "⏸" : "▶";
+el("play").onclick = () => { playing = !playing; el("play").textContent = playing ? "⏸" : "▶"; };
+document.addEventListener("keydown", e => { if (e.code === "Space" && e.target.tagName !== "SELECT") { e.preventDefault(); el("play").click(); } });
+
+// pan, zoom, select a crossing
+let drag = null;
+canvas.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy, moved: false }; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 4) { drag.moved = true; canvas.classList.add("drag"); }
+  view.cx = drag.cx - dx / scale(); view.cy = drag.cy - dy / scale(); clampView();
+});
+canvas.addEventListener("pointerup", e => {
+  if (drag && !drag.moved) {
+    const r = canvas.getBoundingClientRect(), [wx, wy] = toWorld(e.clientX - r.left, e.clientY - r.top);
+    const j = JUNCTIONS.find(j => Math.abs(wx - j.x) < STOP + 4 && Math.abs(wy - j.y) < STOP + 4);
+    if (j) { selected = j.id; el("j" + j.id).scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+  }
+  drag = null; canvas.classList.remove("drag");
+});
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  const r = canvas.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, before = toWorld(mx, my);
+  view.zoom = Math.max(1, Math.min(8, view.zoom * Math.exp(-e.deltaY * 0.0015)));
+  const after = toWorld(mx, my);
+  view.cx += before[0] - after[0]; view.cy += before[1] - after[1]; clampView();
+}, { passive: false });
+canvas.addEventListener("dblclick", () => { view.zoom = 1; view.cx = W / 2; view.cy = H / 2; });
+function clampView() {
+  const hw = W / 2 / view.zoom, hh = H / 2 / view.zoom;
+  view.cx = Math.max(hw, Math.min(W - hw, view.cx)); view.cy = Math.max(hh, Math.min(H - hh, view.cy));
+}
+
+// ----- playback: the simulation runs a whole tick at once, the screen plays it over "1 tick =" ms --------
+// Every step of the tick is recorded; the screen shows the moment between the two nearest steps (linear).
+// So a 2 s tick is 2 s of smooth motion, and the simulation is already at the end of the tick on screen:
+// live, decide() for the next tick thinks while this one plays.
+function snapshot() {   // one moment, as the screen shows it
+  return {
+    clock, lights: JUNCTIONS.map(j => [j.phase, j.stage]),
+    v: new Map([...vehicles].map(v => { const s = shape(v); return [v, { x: s.x, y: s.y, a: s.a, braking: v.acc < -0.8 || v.v < 0.3 }]; })),
+    p: new Map([...people].map(p => { const [x, y, a] = personPos(p); return [p, { x, y, a, walking: p.waitJ === null, phase: p.phase }]; })),
+  };
+}
+let tape = { frames: [], end: -1 };   // the tick on screen: a snapshot per step; end = simSteps when recorded
+let canRunTick = null, onTick = null; // live with city_server.py: is the next tick's decide() answer in? / a tick has started
+function runTick() {
+  const frames = [snapshot()];
+  do { step(DT); frames.push(snapshot()); } while (tickStep !== 0);   // imperative-ok: one step after another, to the next tick
+  tape = { frames, end: simSteps };
+  if (onTick) onTick();
+}
+const lerpAngle = (a, b, w) => a + ((b - a + 3 * Math.PI) % (2 * Math.PI) - Math.PI) * w;
+const lerpPose = (p, q, w) => ({ ...p, x: p.x + (q.x - p.x) * w, y: p.y + (q.y - p.y) * w, a: lerpAngle(p.a, q.a, w) });
+function blend(ma, mb, w, mix) {      // everything in either moment; what comes or goes in this step shows where it is
+  return [...new Set([...ma.keys(), ...mb.keys()])].map(o => [o, ma.has(o) && mb.has(o) ? mix(ma.get(o), mb.get(o), w) : ma.get(o) || mb.get(o)]);
+}
+function showAt(u) {                  // the screen at u (0 = start, 1 = end) of the tick on tape
+  const fr = tape.frames, f = Math.max(0, Math.min(1, u)) * (fr.length - 1), i = Math.min(Math.floor(f), Math.max(0, fr.length - 2));
+  const a = fr[i], b = fr[Math.min(i + 1, fr.length - 1)], w = f - i;
+  return {
+    clock: a.clock + ((b.clock - a.clock + 1440) % 1440) * w, lights: a.lights,
+    vehicles: blend(a.v, b.v, w, lerpPose).map(([v, s]) => ({ v, ...s })),
+    people: blend(a.p, b.p, w, (p, q, w) => ({ ...lerpPose(p, q, w), phase: p.phase + (q.phase - p.phase) * w })).map(([p, s]) => ({ p, ...s })),
+  };
+}
+// the drawing code reads the lights and the clock: while drawing, they are the ones on screen
+function withShown(fn) {
+  const real = { clock, lights: JUNCTIONS.map(j => [j.phase, j.stage]) };
+  clock = shown.clock; JUNCTIONS.forEach((j, i) => { [j.phase, j.stage] = shown.lights[i]; });
+  try { return fn(); } finally { clock = real.clock; JUNCTIONS.forEach((j, i) => { [j.phase, j.stage] = real.lights[i]; }); }
+}
+
+// the loop
+const EASE_MS = 300;                  // the next tick is late (decide() still thinking): glide to a stop, and back
+let last = 0, panelT = 0, playU = 1, rate = 1, shown = null;
+function frame(now) {
+  const ms = last ? Math.min(250, now - last) : 16; last = now;
+  if (tape.end !== simSteps) { tape = { frames: [snapshot()], end: simSteps }; playU = 1; }   // moved without the screen (city.step)
+  if (playing) {
+    const len = +el("tickMs").value, ready = !canRunTick || canRunTick();
+    const target = ready ? 1 : Math.min(1, (1 - playU) * len / EASE_MS);
+    rate = target < rate ? target : Math.min(target, rate + ms / EASE_MS);
+    playU += rate * ms / len;
+    if (playU >= 1 && ready) { runTick(); playU = Math.min(1, playU - 1); }
+    playU = Math.min(1, playU);
+    el("tickNext").textContent = ready || rate > 0.5 ? "" : "· waiting for decide()…";
+  }
+  shown = showAt(playU);
+  withShown(() => {
+    if (window.VIEW3D && VIEW3D.on) VIEW3D.render(ms); else draw();
+    if ((panelT += ms) > 200) { panelT = 0; updatePanel(); }
+  });
+  requestAnimationFrame(frame);
+}
+window.addEventListener("resize", resize);
+resize(); drawStatic(); buildPanel(); updatePanel();
+requestAnimationFrame(frame);
+
+// =============================================================================================
+// For your own controller (for example Jev): read the city with city.state(), set the lights
+// with city.setPhase(id, "A" | "B" | "C" | "D" | "W"). Yellow, all-red and "wait until the
+// crossing is empty" stay in code, so a phase starts a few seconds after you ask for it.
+// city.onSecond(fn) calls fn(state) once per simulated second.
+// =============================================================================================
+const FROM = { S: "north", N: "south", W: "east", E: "west" };   // heading -> the side the traffic comes from
+const LANE_NAME = { L: "left_turn", S: "straight_right", B: "bike" };
+function laneState(seg, lane) {
+  const out = { queue: 0, approaching: 0, max_wait_s: 0, types: {}, moves: { left: 0, straight: 0, right: 0 } };
+  for (const v of seg.lanes[lane]) {
+    const dist = seg.len - v.s;
+    if (dist > 80) continue;
+    if (v.v < 0.3) out.queue++; else out.approaching++;
+    out.max_wait_s = Math.max(out.max_wait_s, Math.round(v.waitHere));
+    out.types[v.type] = (out.types[v.type] || 0) + 1;
+    out.moves[{ L: "left", S: "straight", R: "right" }[v.move]]++;
+  }
+  return out;
+}
+function junctionState(j) {
+  const approaches = {};
+  for (const head of ["S", "W", "N", "E"]) {
+    const seg = inSeg(j.id, head), lanes = {};
+    for (const l of ["L", "S", "B"]) lanes[LANE_NAME[l]] = laneState(seg, l);
+    approaches[FROM[head]] = { lanes, queue: Object.values(lanes).reduce((n, x) => n + x.queue, 0),
+                               light: { left_turn: signalFor(j, head, "L"), straight_right: signalFor(j, head, "S") } };
+  }
+  const zebras = {};
+  for (const arm of ["north", "east", "south", "west"]) zebras[arm] = { waiting: 0, max_wait_s: 0 };
+  for (const p of people) if (p.waitJ === j.id) {
+    const z = zebras[p.legs[p.i].arm]; z.waiting++; z.max_wait_s = Math.max(z.max_wait_s, Math.round(p.legWait));
+  }
+  return {
+    id: j.id, name: j.name, mode: j.mode, phase: j.phase, phase_label: PHASES[j.phase].label, stage: j.stage,
+    seconds_in_stage: +j.t.toFixed(1), requested: j.request,
+    demand: Object.fromEntries(ORDER.map(ph => [ph, demand(j, ph)])),   // vehicles (or people for W) each phase would serve
+    approaches, zebras,
+    people_waiting: Object.values(zebras).reduce((n, z) => n + z.waiting, 0),
+    vehicles_in_crossing: j.box.size, people_on_zebras: j.zebraPeds,
+  };
+}
+// ----- history: what each crossing served, per 15 minutes of the clock ---------------------------
+const BUCKET = 15, history = [];
+function bucket() {
+  const start = Math.floor(clock / BUCKET) * BUCKET;
+  let b = history[history.length - 1];
+  if (!b || b.minute !== start) {
+    const approaches = () => Object.fromEntries(["north", "east", "south", "west"].map(a => [a,
+      { left: 0, straight: 0, right: 0, vehicles: 0, wait_sum: 0, max_queue: 0 }]));
+    b = { minute: start, start: fmtClock(start), junctions: JUNCTIONS.map(j => ({
+      id: j.id, vehicles: approaches(), people: Object.fromEntries(["north", "east", "south", "west"].map(a => [a, { people: 0, wait_sum: 0 }])),
+      green_seconds: Object.fromEntries(ORDER.map(p => [p, 0])) })) };
+    history.push(b);
+    if (history.length > 24 * 60 / BUCKET * 3) history.shift();   // keep 3 days
+  }
+  return b;
+}
+function countVehicle(j, head, v) {
+  const a = bucket().junctions[j.id].vehicles[FROM[head]];
+  a[{ L: "left", S: "straight", R: "right" }[v.move]]++; a.vehicles++; a.wait_sum += v.waitHere;
+}
+function countPerson(j, arm, wait) { const z = bucket().junctions[j.id].people[arm]; z.people++; z.wait_sum += wait; }
+function sampleHistory() {
+  const b = bucket();
+  for (const j of JUNCTIONS) {
+    const h = b.junctions[j.id];
+    if (j.stage === "green" || j.stage === "walk") h.green_seconds[j.phase]++;
+    for (const head of ["S", "W", "N", "E"]) {
+      const seg = inSeg(j.id, head);
+      let q = 0; for (const l of ["L", "S", "B"]) for (const v of seg.lanes[l]) if (v.v < 0.3 && seg.len - v.s < 80) q++;
+      const a = h.vehicles[FROM[head]]; a.max_queue = Math.max(a.max_queue, q);
+    }
+  }
+}
+function historyOut(last) {
+  return history.slice(-(last || history.length)).map(b => ({ start: b.start, junctions: b.junctions.map(h => ({
+    id: h.id, green_seconds: h.green_seconds,
+    vehicles: Object.fromEntries(Object.entries(h.vehicles).map(([k, a]) => [k, { left: a.left, straight: a.straight, right: a.right,
+      avg_wait_s: a.vehicles ? +(a.wait_sum / a.vehicles).toFixed(1) : 0, max_queue: a.max_queue }])),
+    people: Object.fromEntries(Object.entries(h.people).map(([k, z]) => [k, { crossed: z.people, avg_wait_s: z.people ? +(z.wait_sum / z.people).toFixed(1) : 0 }])),
+  })) }));
+}
+function checkSchedule(plan) {
+  const lists = Array.isArray(plan) ? [plan] : Object.entries(plan).map(([k, v]) => { if (!/^\d\d:\d\d$/.test(k)) throw new Error(`day plan keys are "HH:MM", got ${k}`); return v; });
+  for (const list of lists) {
+    if (!Array.isArray(list) || !list.length) throw new Error("a schedule is a list of {phase, seconds}");
+    for (const e of list) {
+      if (!PHASES[e.phase]) throw new Error(`phase must be one of ${ORDER.join(", ")}, got ${e.phase}`);
+      if (!(e.seconds >= 3 && e.seconds <= 180)) throw new Error(`seconds must be 3..180, got ${e.seconds}`);
+    }
+  }
+}
+
+const secondListeners = [];
+let secondAcc = 0;
+const _step = step;
+step = function (dt) { _step(dt); secondAcc += dt; if (secondAcc >= 1) { secondAcc -= 1; sampleHistory(); if (secondListeners.length) { const st = cityState(); secondListeners.forEach(f => f(st)); } } };
+function cityState() {
+  let wv = 0; for (const v of vehicles) if (v.v < 0.3) wv++;
+  let wp = 0; for (const p of people) if (p.waitJ !== null) wp++;
+  return {
+    clock: fmtClock(clock), minute_of_day: Math.floor(clock), rush_hour: busy(clock) >= 1, night: darkness() > 0.25,
+    wave: waveAt(clock) ? waveAt(clock).label : null,
+    totals: { vehicles: vehicles.size, people: people.size, vehicles_waiting: wv, people_waiting: wp,
+              trips_vehicles: stats.tripsV, trips_people: stats.tripsP,
+              avg_wait_vehicle_s: stats.tripsV ? +(stats.waitV / stats.tripsV).toFixed(1) : 0,
+              avg_wait_person_s: stats.tripsP ? +(stats.waitP / stats.tripsP).toFixed(1) : 0,
+              collisions: stats.collisions },
+    phases: Object.fromEntries(ORDER.map(p => [p, PHASES[p].label])),
+    junctions: JUNCTIONS.map(junctionState),
+  };
+}
+
+// what decide() gets: per crossing its lights and who waits; city.state() has everything else
+const SIDES = ["north", "east", "south", "west"];
+function decideState(tick) {
+  return { tick, clock: fmtClock(clock), crossings: JUNCTIONS.map(j => {
+    const s = junctionState(j);
+    return {
+      id: j.id, name: j.name, lights: j.stage === "allred" ? null : j.phase, ticks: Math.round(j.t / TICK),
+      cars: Object.fromEntries(SIDES.map(side => { const l = s.approaches[side].lanes;
+        return [side, { left: l.left_turn.queue, straight_right: l.straight_right.queue, bikes: l.bike.queue }]; })),
+      people: Object.fromEntries(SIDES.map(side => [side, s.zebras[side].waiting])),
+    };
+  }) };
+}
+
+// warm up: the city is already busy when you open it
+for (let i = 0; i < 90 / DT; i++) step(DT);
+updatePanel();
+
+window.city = {
+  state: cityState,
+  decideState,             // the small state city_server.py passes to decide() as current
+  TICK,                    // simulated seconds per tick: a vehicle that goes crosses in exactly 1 tick
+  // lights exactly as given, right now (no yellow, no all-red): what city_server.py uses for decide()
+  setLights(id, phase) {
+    if (!PHASES[phase]) throw new Error("phase must be one of " + ORDER.join(", "));
+    const j = JUNCTIONS[id];
+    if (j.mode === "direct" && j.phase === phase && j.stage !== "allred") return;
+    j.mode = "direct"; j.request = null; j.phase = phase; j.stage = phase === "W" ? "walk" : "green"; j.t = 0; j.serial++;
+  },
+  allRed(id) { const j = JUNCTIONS[id]; j.mode = "direct"; j.request = null; j.stage = "allred"; j.t = 0; j.serial++; },
+  setPhase(id, phase) { if (!PHASES[phase]) throw new Error("phase must be one of " + ORDER.join(", ")); JUNCTIONS[id].mode = "manual"; JUNCTIONS[id].request = phase; },
+  // Jev's job: a schedule per crossing. One cycle, or a day plan keyed by "HH:MM" (see currentPlan).
+  setSchedule(id, plan) {
+    checkSchedule(plan);
+    const j = JUNCTIONS[id]; j.schedule = JSON.parse(JSON.stringify(plan)); j.mode = "schedule"; j.request = null;
+    const sel = document.querySelector(`select.mode[data-j="${id}"]`); if (sel) sel.value = "schedule";
+  },
+  getSchedule: id => ({ mode: JUNCTIONS[id].mode, now: currentPlan(JUNCTIONS[id]), schedule: JUNCTIONS[id].schedule }),
+  history: historyOut,     // per 15 clock minutes: vehicles per approach and turn, waits, max queue, people, green time
+  onSecond(fn) { secondListeners.push(fn); return () => secondListeners.splice(secondListeners.indexOf(fn), 1); },
+  step(seconds) { for (let i = 0; i < seconds / DT; i++) step(DT); updatePanel(); },
+  stats: () => ({ ...stats, vehicles: vehicles.size, people: people.size, clock,
+                  types: [...vehicles].reduce((m, v) => (m[v.type] = (m[v.type] || 0) + 1, m), {}),
+                  junctions: JUNCTIONS.map(j => ({ id: j.id, name: j.name, mode: j.mode, phase: j.phase, stage: j.stage })) }),
+  setMode(id, mode) { JUNCTIONS[id].mode = mode; JUNCTIONS[id].request = null; },
+  request(id, phase) { JUNCTIONS[id].mode = "manual"; JUNCTIONS[id].request = phase; },
+  setClock(min) { clock = min; },
+  // what the screen tints now, "G" or "Y" per band: "crossing:heading:move" (heading = where it drives, B = bike lane), "crossing:walk:zebra"
+  greens() { const lit = () => Object.fromEntries(GREENS.map(g => [g.key, greenOf(g)]).filter(([, c]) => c)); return shown ? withShown(lit) : lit(); },
+  view, draw,
+};
+
+// ----- live with city_server.py: every N simulated seconds, ask the Python side (your Jev) -------
+(async function connectToServer() {
+  if (!location.protocol.startsWith("http")) return;              // opened as a file: no Jev
+  let cfg;
+  try { cfg = await (await fetch("/api/config")).json(); } catch { return; }
+  el("jevCard").hidden = false;
+  for (const j of JUNCTIONS) window.city.allRed(j.id);              // all red until your decide() answers
+  // your decide() is the only controller: hide the built-in ones
+  el("allModeBox").hidden = true;
+  document.querySelectorAll("select.mode, .btns").forEach(x => { x.hidden = true; x.style.display = "none"; });
+  for (const j of JUNCTIONS) el("js" + j.id).dataset.live = "1";
+  const tickSel = el("tickMs"), tickMs = Math.round(cfg.tick * 1000);
+  if (![...tickSel.options].some(o => +o.value === tickMs)) tickSel.add(new Option(tickMs >= 1000 ? tickMs / 1000 + " s" : tickMs + " ms", tickMs));
+  tickSel.value = String(tickMs);
+  let calls = 0, tokens = 0, cost = 0, tickN = 0, answer = null, lastLights = {};
+  const log = [], waitSeries = [], picks = {};       // per call: {t, ms, cost, tokens}; per sim second: {t, waiting}
+  const LIMIT = 120, DECISIONS = 300;
+  const status = (text, color) => { el("jevStatus").textContent = text; el("jevStatus").className = "phase " + color; };
+  el("tickBox").hidden = false;
+  // the decisions list: one row per tick, the newest on top; a light that changed is highlighted
+  // the live score: every tick, +1 per vehicle or person across a crossing, −0.2 per one still waiting
+  const BEST = "jev.level5.bestPerTick";
+  let score = 0, scoredTicks = 0, lastCrossed = stats.crossed;
+  const bestPerTick = () => { try { return JSON.parse(localStorage.getItem(BEST) || "null"); } catch { return null; } };
+  function tickPoints() {   // the tick that just started playing (the simulation is at its end)
+    const st = cityState(), across = stats.crossed - lastCrossed;
+    lastCrossed = stats.crossed;
+    return Math.round((across - 0.2 * (st.totals.vehicles_waiting + st.totals.people_waiting)) * 10) / 10;
+  }
+  function paintScore(points) {
+    score = Math.round((score + points) * 10) / 10; scoredTicks++;
+    const avg = score / scoredTicks, best = bestPerTick();
+    if (scoredTicks >= 20 && (best === null || avg > best)) { try { localStorage.setItem(BEST, JSON.stringify(+avg.toFixed(2))); } catch { /* not kept */ } }
+    el("jevScore").textContent = score.toFixed(1); el("jevScore").className = `v ${score >= 0 ? "" : "bad"}`;
+    el("jevAvg").textContent = `${avg.toFixed(2)} · ${best === null ? "–" : best.toFixed(2)}`;
+  }
+  function logDecision(tick, when, lights, ms, error, points) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="n">#${tick}</span><span class="when">${when}</span>` + (error
+      ? `<span class="err"></span><span></span>`
+      : `<span>${JUNCTIONS.map(j => lights[j.id] ? `<span class="ph${lights[j.id] !== lastLights[j.id] ? " chg" : ""}" title="${j.name}: ${PHASES[lights[j.id]].label}">${lights[j.id]}</span>`
+                                                    : `<span class="ph off" title="${j.name}: unchanged">·</span>`).join("")}</span><span class="ms">${ms} ms</span>`) +
+      `<span class="pts ${points >= 0 ? "ok" : "bad"}" title="this tick's points">${points >= 0 ? "+" : ""}${Number(points).toFixed(1)}</span>`;
+    if (error) { const e = li.querySelector(".err"); e.textContent = e.title = error; }   // text, never HTML
+    const list = el("decisions");
+    list.prepend(li);
+    if (list.children.length > DECISIONS) list.lastElementChild.remove();
+  }
+  // One tick = one decide() call. It is asked as soon as a tick starts (the simulation is then already at
+  // its end), so Jev thinks while the screen plays the tick. The next tick runs with the answer's lights
+  // (decide() failed: the lights stay); a late answer makes the screen glide to a stop and wait.
+  async function ask() {
+    const n = ++tickN, when = fmtClock(clock);
+    status("thinking…", "yellow");
+    try {
+      const r = await (await fetch("/api/decide", { method: "POST", headers: { "content-type": "application/json" },
+                                                    body: JSON.stringify({ state: decideState(n) }) })).json();
+      if (r.error) throw new Error(r.error);
+      const lights = Object.fromEntries(Object.entries(r.lights || {}).map(([id, ph]) => [+id, ph]));
+      for (const [id, phase] of Object.entries(lights)) window.city.setLights(+id, phase);   // the simulation waits at the tick's start
+      calls += r.calls || 0; tokens += r.tokens || 0; cost += r.cost_usd || 0;
+      log.push({ t: simT, clock: when, ms: r.latency_ms || 0, cost, tokens: r.tokens || 0 });
+      if (log.length > LIMIT) log.shift();
+      for (const ph of Object.values(lights)) picks[`${ph} · ${PHASES[ph].label}`] = (picks[`${ph} · ${PHASES[ph].label}`] || 0) + 1;
+      el("jevCalls").textContent = calls; el("jevTokens").textContent = tokens.toLocaleString(); el("jevWhen").textContent = when;
+      el("jevCost").textContent = "$" + cost.toFixed(4);
+      el("jevLat").textContent = Math.round(log.reduce((a, x) => a + x.ms, 0) / log.length) + " ms";
+      drawCharts();
+      answer = { n, when, lights, ms: r.latency_ms || 0 };
+      status("lights set", "green");
+    } catch (e) {
+      status("error", "red");
+      answer = { n, when, lights: {}, ms: 0, error: e.message };
+    }
+  }
+  canRunTick = () => answer !== null;
+  onTick = () => {                       // the answered tick is now on screen: list it, and ask for the next one
+    const a = answer; answer = null;
+    el("tickN").textContent = a.n;
+    const points = tickPoints();
+    logDecision(a.n, a.when, a.lights, a.ms, a.error, points);
+    paintScore(points);
+    if (a.error) el("jevNote").textContent = a.error;
+    else { lastLights = { ...lastLights, ...a.lights }; el("jevNote").textContent = ""; }
+    ask();
+  };
+  ask();                                 // the first tick
+  let simT = 0;
+  window.city.onSecond(st => {
+    simT++;
+    waitSeries.push({ t: simT, clock: st.clock, v: st.totals.vehicles_waiting });
+    if (waitSeries.length > 600) waitSeries.shift();
+    if (simT % 2 === 0) drawCharts();
+  });
+  // ----- small SVG charts (one series each, one axis each), with a hover tooltip -------------------
+  const NS = "http://www.w3.org/2000/svg", BLUE = "#3987e5", W0 = 300, H0 = 74, PADL = 34, PADB = 12;
+  function axisMax(v) { if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); return Math.ceil(v / p * 2) / 2 * p; }
+  function frame(svg, max, fmt) {
+    svg.innerHTML = "";
+    for (const f of [0, 0.5, 1]) {
+      const y = H0 - PADB - f * (H0 - PADB - 4);
+      svg.insertAdjacentHTML("beforeend", `<line x1="${PADL}" x2="${W0}" y1="${y}" y2="${y}" stroke="#28323d" stroke-width="1"/><text x="${PADL - 4}" y="${y + 3}" text-anchor="end">${fmt(max * f)}</text>`);
+    }
+  }
+  function lineChart(svg, pts, getV, fmt, marks) {
+    if (!pts.length) { svg.innerHTML = `<text x="150" y="40" text-anchor="middle">waiting for data…</text>`; return; }
+    const max = axisMax(Math.max(...pts.map(getV))), t0 = pts[0].t, t1 = Math.max(pts[pts.length - 1].t, t0 + 1);
+    const X = t => PADL + (t - t0) / (t1 - t0) * (W0 - PADL - 2), Y = v => H0 - PADB - v / max * (H0 - PADB - 4);
+    frame(svg, max, fmt);
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${X(p.t).toFixed(1)},${Y(getV(p)).toFixed(1)}`).join("");
+    svg.insertAdjacentHTML("beforeend", `<path d="${d}L${X(pts[pts.length - 1].t)},${H0 - PADB}L${X(t0)},${H0 - PADB}Z" fill="${BLUE}" opacity=".18"/><path d="${d}" fill="none" stroke="${BLUE}" stroke-width="2" stroke-linejoin="round"/>`);
+    for (const m of marks || []) if (m.t >= t0) svg.insertAdjacentHTML("beforeend", `<text x="${X(m.t)}" y="8" text-anchor="middle" style="fill:#e8eef4">▾</text>`);
+    const last = pts[pts.length - 1];
+    svg.insertAdjacentHTML("beforeend", `<circle cx="${X(last.t)}" cy="${Y(getV(last))}" r="3" fill="${BLUE}" stroke="#161d25" stroke-width="2"/>`);
+    hover(svg, pts, X, p => `${p.clock}: ${fmt(getV(p))}`, p => [X(p.t), Y(getV(p))]);
+  }
+  function barChart(svg, pts) {
+    if (!pts.length) { svg.innerHTML = `<text x="150" y="40" text-anchor="middle">waiting for data…</text>`; return; }
+    const max = axisMax(Math.max(...pts.map(p => p.ms))), n = Math.max(pts.length, 12), bw = (W0 - PADL - 2) / n;
+    const Y = v => H0 - PADB - v / max * (H0 - PADB - 4);
+    frame(svg, max, v => Math.round(v));
+    pts.forEach((p, i) => {
+      const x = PADL + i * bw + 1, y = Y(p.ms), h = H0 - PADB - y;
+      svg.insertAdjacentHTML("beforeend", `<path d="M${x},${H0 - PADB}V${y + Math.min(3, h)}q0,-3 3,-3h${Math.max(0, bw - 8)}q3,0 3,3V${H0 - PADB}Z" fill="${BLUE}"/>`);
+    });
+    hover(svg, pts, (t, i) => PADL + i * bw + bw / 2, p => `call at ${p.clock}: ${p.ms} ms, ${p.tokens} tokens`, (p, i) => [PADL + i * bw + bw / 2, Y(p.ms)], true);
+  }
+  function hover(svg, pts, X, text, at, byIndex) {
+    const tip = el("tip");
+    svg.onmousemove = e => {
+      const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * W0;
+      let best = 0, bd = 1e9;
+      pts.forEach((p, i) => { const d = Math.abs((byIndex ? X(p.t, i) : X(p.t)) - mx); if (d < bd) { bd = d; best = i; } });
+      const [px, py] = at(pts[best], best), card = el("jevCard").getBoundingClientRect();
+      tip.hidden = false; tip.textContent = text(pts[best]);
+      tip.style.left = Math.min(card.width - 150, Math.max(0, r.left - card.left + px / W0 * r.width - 40)) + "px";
+      tip.style.top = (r.top - card.top + py / H0 * r.height - 30) + "px";
+    };
+    svg.onmouseleave = () => { tip.hidden = true; };
+  }
+  function drawCharts() {
+    lineChart(el("chCost"), log, p => p.cost, v => v === 0 ? "$0" : "$" + v.toPrecision(2));
+    barChart(el("chLat"), log.slice(-24));
+    lineChart(el("chWait"), waitSeries, p => p.v, v => Math.round(v), log);
+    const entries = Object.entries(picks).sort((a, b) => b[1] - a[1]), top = entries.length ? entries[0][1] : 1;
+    el("chPicks").innerHTML = entries.length ? `<div class="bars">${entries.map(([k, n]) =>
+      `<span class="lab">${k.replace(/_/g, " ")}</span><div class="bar" style="width:${n / top * 100}%"></div><span class="n">${n}</span>`).join("")}</div>`
+      : `<span class="hint">waiting for data…</span>`;
+  }
+  drawCharts();
+  ask();                                                            // first schedule right away
+})();
+</script>
+<script>
+"use strict";
+// =============================================================================================
+// The 3D city (Three.js). Same simulation, drawn with buildings, shadows, sky and lights.
+// =============================================================================================
+window.VIEW3D = (function () {
+  if (!window.THREE || !THREE.OrbitControls) { document.getElementById("viewBtn").hidden = true; return null; }
+  const T = THREE, c3 = document.getElementById("c3");
+  let renderer;
+  try { renderer = new T.WebGLRenderer({ canvas: c3, antialias: true, logarithmicDepthBuffer: true }); } catch { document.getElementById("viewBtn").hidden = true; return null; }
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+  renderer.outputEncoding = T.sRGBEncoding;
+  const scene = new T.Scene();
+  scene.fog = new T.Fog(0x9cc6ee, 450, 1300);
+  const camera = new T.PerspectiveCamera(42, 4 / 3, 2, 2500);
+  camera.position.set(W / 2 - 70, 300, H / 2 + 250);
+  const controls = new T.OrbitControls(camera, c3);
+  controls.target.set(W / 2, 0, H / 2); controls.enableDamping = true; controls.dampingFactor = 0.08;
+  controls.maxPolarAngle = Math.PI * 0.46; controls.minDistance = 18; controls.maxDistance = 750;
+  controls.screenSpacePanning = false;
+
+  // ----- light: sun, sky, street lamps
+  const hemi = new T.HemisphereLight(0xdfefff, 0x404535, 0.6); scene.add(hemi);
+  const sun = new T.DirectionalLight(0xfff4e0, 1.1);
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -270, right: 270, top: 230, bottom: -230, near: 20, far: 1000 });
+  sun.shadow.bias = -0.0008; sun.shadow.normalBias = 0.6;
+  sun.target.position.set(W / 2, 0, H / 2); scene.add(sun, sun.target);
+  const junctionLights = JUNCTIONS.map(j => { const l = new T.PointLight(0xffc98a, 0, 70, 1.6); l.position.set(j.x, 9, j.y); scene.add(l); return l; });
+
+  // ----- ground: the 2D map without buildings and trees, as a texture
+  const gc = document.createElement("canvas"); gc.width = W * 6; gc.height = H * 6;
+  paintGround(gc, false);
+  const gtex = new T.CanvasTexture(gc); gtex.encoding = T.sRGBEncoding; gtex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const ground = new T.Mesh(new T.PlaneGeometry(W, H), new T.MeshStandardMaterial({ map: gtex, color: 0xb8b8b8, roughness: 0.95 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.set(W / 2, 0, H / 2); ground.receiveShadow = true; scene.add(ground);
+  const outer = new T.Mesh(new T.PlaneGeometry(4000, 4000), new T.MeshStandardMaterial({ color: 0x4b5a46, roughness: 1 }));
+  outer.rotation.x = -Math.PI / 2; outer.position.set(W / 2, -0.4, H / 2); scene.add(outer);
+  for (const y of YS) { addBox(300, 0.1, HW * 2, 0x3a4048, -150, -0.05, y); addBox(300, 0.1, HW * 2, 0x3a4048, W + 150, -0.05, y); }   // roads run on
+  for (const x of XS) { addBox(HW * 2, 0.1, 300, 0x3a4048, x, -0.05, -150); addBox(HW * 2, 0.1, 300, 0x3a4048, x, -0.05, H + 150); } // past the map
+  function addBox(w, h, d, color, x, y, z) { const m = new T.Mesh(new T.BoxGeometry(w, h, d), new T.MeshStandardMaterial({ color, roughness: 0.95 })); m.position.set(x, y, z); scene.add(m); return m; }
+
+  // ----- buildings with window facades (lit at night)
+  function facade(style, lit) {
+    const cv = document.createElement("canvas"); cv.width = cv.height = 128;
+    const g = cv.getContext("2d"), r = mulberry32(style * 13 + (lit ? 7 : 1));
+    const walls = ["#a39c90", "#7f8a97", "#b3a690", "#6f7a86"], glass = ["#2a3a4c", "#33485e", "#25313d", "#3b4f63"];
+    g.fillStyle = lit ? "#000" : walls[style]; g.fillRect(0, 0, 128, 128);
+    for (let fy = 0; fy < 4; fy++) for (let fx = 0; fx < 4; fx++) {
+      const x = fx * 32 + 5, y = fy * 32 + 7, w = style === 1 ? 26 : 22, h = style === 3 ? 22 : 16;
+      if (lit) { if (r() < 0.45) { g.fillStyle = r() < 0.7 ? "#ffd58a" : "#cfe3ff"; g.fillRect(x, y, w, h); } }
+      else { g.fillStyle = glass[style]; g.fillRect(x, y, w, h); g.fillStyle = "rgba(255,255,255,.15)"; g.fillRect(x, y, w, 3); }
+    }
+    const t = new T.CanvasTexture(cv); t.wrapS = t.wrapT = T.RepeatWrapping; if (!lit) t.encoding = T.sRGBEncoding;
+    return t;
+  }
+  const FACADES = [0, 1, 2, 3].map(i => ({ day: facade(i, false), night: facade(i, true) }));
+  const sideMats = [];
+  const roofBoxMat = new T.MeshStandardMaterial({ color: 0x6b737c, roughness: 0.8 });
+  for (const b of BUILDINGS) {
+    const height = b.floors * 2.6, F = FACADES[b.style];
+    const mat = (span) => {
+      const map = F.day.clone(), em = F.night.clone();
+      for (const t of [map, em]) { t.needsUpdate = true; t.repeat.set(Math.max(1, Math.round(span / 12)), b.floors / 4); t.offset.set(b.lit, b.lit * 3); }
+      const m = new T.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.75, metalness: 0.15 });
+      sideMats.push(m); return m;
+    };
+    const mx = mat(b.h), mz = mat(b.w), roof = new T.MeshStandardMaterial({ color: b.roof, roughness: 0.9 });
+    const box = new T.Mesh(new T.BoxGeometry(b.w, height, b.h), [mx, mx, roof, roof, mz, mz]);
+    box.position.set(b.x + b.w / 2, height / 2, b.y + b.h / 2); box.castShadow = box.receiveShadow = true; scene.add(box);
+    for (const [rx, ry, rw, rh] of b.boxes) {
+      const u = new T.Mesh(new T.BoxGeometry(rw, 1.4, rh), roofBoxMat);
+      u.position.set(rx + rw / 2, height + 0.7, ry + rh / 2); u.castShadow = true; scene.add(u);
+    }
+    if (b.floors > 15) {                                                // antenna with a red light
+      const a = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, 7), roofBoxMat); a.position.set(b.x + b.w / 2, height + 3.5, b.y + b.h / 2); scene.add(a);
+      const l = new T.Mesh(new T.SphereGeometry(0.4, 8, 6), new T.MeshBasicMaterial({ color: 0xff3030 })); l.position.set(b.x + b.w / 2, height + 7.2, b.y + b.h / 2); scene.add(l);
+    }
+  }
+
+  // ----- trees (instanced)
+  const trunkGeo = new T.CylinderGeometry(0.22, 0.32, 1, 6), crownGeo = new T.IcosahedronGeometry(1, 1);
+  const trunks = new T.InstancedMesh(trunkGeo, new T.MeshStandardMaterial({ color: 0x5a4030, roughness: 1 }), TREES.length);
+  const crowns = new T.InstancedMesh(crownGeo, new T.MeshStandardMaterial({ roughness: 0.9, flatShading: true }), TREES.length);
+  const M = new T.Matrix4(), Q = new T.Quaternion(), V = new T.Vector3(), S = new T.Vector3(), C = new T.Color();
+  TREES.forEach((t, i) => {
+    const h = t.street ? 3 : 2.5 + t.r;
+    M.compose(V.set(t.x, h / 2, t.y), Q.identity(), S.set(1, h, 1)); trunks.setMatrixAt(i, M);
+    M.compose(V.set(t.x, h + t.r * 0.7, t.y), Q.setFromAxisAngle(V.clone().set(0, 1, 0), i), S.set(t.r, t.r * 1.15, t.r)); crowns.setMatrixAt(i, M);
+    crowns.setColorAt(i, C.set(t.color));
+  });
+  trunks.castShadow = crowns.castShadow = true; crowns.receiveShadow = true; scene.add(trunks, crowns);
+
+  // ----- street lamps
+  const lampSpots = [];
+  for (const j of JUNCTIONS) for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) lampSpots.push([j.x + sx * (HW + 2.3), j.y + sy * (HW + 2.3)]);
+  for (const y of YS) for (let x = 20; x < W; x += 36) if (!XS.some(X => Math.abs(X - x) < 25)) { lampSpots.push([x, y - HW - 0.8]); lampSpots.push([x + 18, y + HW + 0.8]); }
+  for (const x of XS) for (let y = 20; y < H; y += 36) if (!YS.some(Y => Math.abs(Y - y) < 25)) { lampSpots.push([x - HW - 0.8, y]); lampSpots.push([x + HW + 0.8, y + 18]); }
+  const poleMat = new T.MeshStandardMaterial({ color: 0x2d333a, metalness: 0.5, roughness: 0.5 });
+  const bulbMat = new T.MeshStandardMaterial({ color: 0x333333, emissive: 0xffd9a0, emissiveIntensity: 0 });
+  const poles = new T.InstancedMesh(new T.CylinderGeometry(0.12, 0.16, 7, 6), poleMat, lampSpots.length);
+  const bulbs = new T.InstancedMesh(new T.SphereGeometry(0.35, 8, 6), bulbMat, lampSpots.length);
+  lampSpots.forEach(([x, z], i) => { M.compose(V.set(x, 3.5, z), Q.identity(), S.set(1, 1, 1)); poles.setMatrixAt(i, M); M.compose(V.set(x, 7.1, z), Q.identity(), S.set(1, 1, 1)); bulbs.setMatrixAt(i, M); });
+  scene.add(poles, bulbs);
+
+  // ----- traffic lights: a pole on the corner, an arm over the lanes, two lamps (left arrow, main)
+  const signals = [], labels = document.getElementById("labels");
+  const badges = JUNCTIONS.map(j => { const b = document.createElement("div"); b.className = "xbadge"; labels.appendChild(b);
+                                      return { j, el: b, at: new T.Vector3(j.x, 34, j.y) }; });
+  const idTags = JUNCTIONS.map(j => { const t = document.createElement("div"); t.className = "xid"; t.textContent = `#${j.id}`;
+                                      t.title = `${j.name}: the key in decide()'s answer`; labels.appendChild(t); return { el: t, at: new T.Vector3(j.x, 3, j.y) }; });
+  const headMat = new T.MeshStandardMaterial({ color: 0x14181d, roughness: 0.6 });
+  const lampGeo = new T.SphereGeometry(0.32, 10, 8);
+  for (const j of JUNCTIONS) for (const head of ["N", "S", "E", "W"]) {
+    const seg = inSeg(j.id, head), d = DIRS[head], r = rightOf(d);
+    const base = add(add(seg.start, d, seg.len + 1.2), r, HW + 1.3), over = add(add(seg.start, d, seg.len + 1.2), r, 3.4);
+    const pole = new T.Mesh(new T.CylinderGeometry(0.16, 0.2, 6.2, 8), poleMat); pole.position.set(base[0], 3.1, base[1]); pole.castShadow = true; scene.add(pole);
+    const len = Math.hypot(over[0] - base[0], over[1] - base[1]);
+    const arm = new T.Mesh(new T.BoxGeometry(len, 0.18, 0.18), poleMat);
+    arm.position.set((base[0] + over[0]) / 2, 6.0, (base[1] + over[1]) / 2); arm.rotation.y = -Math.atan2(over[1] - base[1], over[0] - base[0]); scene.add(arm);
+    const box = new T.Mesh(new T.BoxGeometry(0.5, 2.0, 0.9), headMat);
+    box.position.set(over[0], 5.0, over[1]); box.rotation.y = -Math.atan2(d[1], d[0]); box.castShadow = true; scene.add(box);
+    const lamp = (dy) => { const m = new T.Mesh(lampGeo, new T.MeshBasicMaterial({ color: 0xff4d55 })); m.position.set(over[0] - d[0] * 0.3, 5.0 + dy, over[1] - d[1] * 0.3); scene.add(m); return m; };
+    const tag = document.createElement("div"); tag.className = "sig"; labels.appendChild(tag);
+    signals.push({ j, head, main: lamp(-0.45), left: lamp(0.45), tag, at: new T.Vector3(over[0], 6.6, over[1]),
+                   from: { S: "from north", N: "from south", W: "from east", E: "from west" }[head] });
+  }
+  const walkLamps = [];
+  for (const j of JUNCTIONS) for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const pole = new T.Mesh(new T.CylinderGeometry(0.08, 0.08, 2.6, 6), poleMat); pole.position.set(j.x + sx * (HW + 1.0), 1.3, j.y + sy * (HW + 1.0)); scene.add(pole);
+    const m = new T.Mesh(new T.BoxGeometry(0.5, 0.5, 0.5), new T.MeshBasicMaterial({ color: 0xff4d55 })); m.position.set(j.x + sx * (HW + 1.0), 2.8, j.y + sy * (HW + 1.0)); scene.add(m);
+    walkLamps.push({ j, m });
+  }
+  const ring = new T.Mesh(new T.RingGeometry(STOP + 1, STOP + 2.2, 48), new T.MeshBasicMaterial({ color: 0x6aa9ff, transparent: true, opacity: 0.75 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.y = 0.06; scene.add(ring);
+
+  // ----- what the lights let go (GREENS): flat bands just above the road, under the traffic, shown per frame.
+  // One material per crossing; the stencil lets each pixel be tinted once, so where bands overlap it is not doubled.
+  const TINT3 = { G: new T.Color(0x2fd27a).convertSRGBToLinear(), Y: new T.Color(0xffb020).convertSRGBToLinear() };
+  const greenMats = JUNCTIONS.map(() => new T.MeshBasicMaterial({ transparent: true, depthWrite: false, side: T.DoubleSide,
+    stencilWrite: true, stencilRef: 1, stencilFunc: T.NotEqualStencilFunc, stencilZPass: T.ReplaceStencilOp }));
+  const greenMeshes = GREENS.map(g => {
+    const n = g.left.length, pts = [...g.left.flatMap((p, i) => [p, g.right[i]]), ...(g.tip || [])];
+    const quads = g.left.slice(1).flatMap((_, i) => [2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 2, 2 * i + 1, 2 * i + 3]);
+    const geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.Float32BufferAttribute(pts.flatMap(p => [p[0], 0.05, p[1]]), 3));
+    geo.setIndex(g.tip ? [...quads, 2 * n, 2 * n + 1, 2 * n + 2] : quads);
+    const m = new T.Mesh(geo, greenMats[g.j.id]); m.visible = false; scene.add(m);
+    return m;
+  });
+
+  // ----- vehicles and people
+  const glass = new T.MeshStandardMaterial({ color: 0x1a2430, metalness: 0.4, roughness: 0.15 });
+  const dark = new T.MeshStandardMaterial({ color: 0x24282e, roughness: 0.7 });
+  const headlightMat = new T.MeshStandardMaterial({ color: 0xeeeeee, emissive: 0xfff2c0, emissiveIntensity: 0.2 });
+  const skinMat = new T.MeshStandardMaterial({ color: 0xc89878, roughness: 0.8 });
+  const pantsMat = new T.MeshStandardMaterial({ color: 0x2b2d36, roughness: 0.9 });
+  const mats = new Map();
+  const matOf = (color, extra = {}) => { const k = color + JSON.stringify(extra); if (!mats.has(k)) mats.set(k, new T.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.25, ...extra })); return mats.get(k); };
+  const box = (w, h, d, mat, x, y, z) => { const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); return m; };
+  function rider(g, shirt, y) {
+    const body = new T.Mesh(new T.CylinderGeometry(0.2, 0.24, 0.75, 8), matOf(shirt)); body.position.set(-0.1, y + 0.4, 0); g.add(body);
+    const helmet = new T.Mesh(new T.SphereGeometry(0.2, 10, 8), matOf(["#ffffff", "#e63946", "#1d3557", "#ffb703"][Math.floor(Math.random() * 4)])); helmet.position.set(-0.05, y + 0.95, 0); g.add(helmet);
+  }
+  function buildVehicle(v) {
+    const g = new T.Group(), L = v.len, Wd = v.spec.w;
+    const brake = new T.MeshStandardMaterial({ color: 0x550000, emissive: 0xff1020, emissiveIntensity: 0.2 });
+    if (v.spec.bike) {
+      g.add(box(L, 0.45, Wd * 0.7, matOf(v.type === "bike" ? "#ff9f1c" : "#2b2f36"), 0, 0.5, 0));
+      const wheel = new T.CylinderGeometry(0.3, 0.3, 0.12, 10);
+      for (const x of [-L / 2 + 0.3, L / 2 - 0.3]) { const w = new T.Mesh(wheel, dark); w.rotation.x = Math.PI / 2; w.position.set(x, 0.3, 0); g.add(w); }
+      rider(g, v.rider, 0.6);
+    } else if (v.type === "bus") {
+      g.add(box(L, 2.6, Wd, matOf("#f4f6f8"), 0, 1.6, 0));
+      g.add(box(L * 0.92, 0.95, Wd + 0.04, glass, 0, 2.0, 0));
+      g.add(box(L + 0.02, 0.3, Wd + 0.03, matOf("#3d7bd9"), 0, 0.85, 0));
+      g.add(box(L * 0.3, 0.35, Wd * 0.6, matOf("#c9ced6"), -L * 0.15, 3.05, 0));
+      const hl = box(0.1, 0.3, Wd * 0.8, headlightMat, L / 2, 0.8, 0); g.add(hl);
+      const bl = box(0.1, 0.35, Wd * 0.8, brake, -L / 2, 0.8, 0); g.add(bl);
+      for (const x of [-L / 2 + 2, L / 2 - 2]) for (const z of [-Wd / 2, Wd / 2]) { const w = new T.Mesh(new T.CylinderGeometry(0.5, 0.5, 0.3, 12), dark); w.rotation.x = Math.PI / 2; w.position.set(x, 0.5, z); g.add(w); }
+    } else {
+      const body = v.type === "taxi" ? "#ffd23f" : v.color;
+      g.add(box(L, 0.8, Wd, matOf(body), 0, 0.65, 0));
+      g.add(box(L * 0.52, 0.6, Wd * 0.86, glass, -L * 0.05, 1.33, 0));
+      g.add(box(L * 0.42, 0.06, Wd * 0.8, matOf(body), -L * 0.05, 1.66, 0));
+      if (v.type === "taxi") g.add(box(0.5, 0.3, 0.9, matOf("#ffffff", { emissive: 0xffffff, emissiveIntensity: 0.4 }), -L * 0.05, 1.85, 0));
+      g.add(box(0.06, 0.2, Wd * 0.75, headlightMat, L / 2, 0.75, 0));
+      g.add(box(0.06, 0.2, Wd * 0.75, brake, -L / 2, 0.75, 0));
+      for (const x of [-L * 0.32, L * 0.32]) for (const z of [-Wd / 2 + 0.05, Wd / 2 - 0.05]) { const w = new T.Mesh(new T.CylinderGeometry(0.34, 0.34, 0.24, 12), dark); w.rotation.x = Math.PI / 2; w.position.set(x, 0.34, z); g.add(w); }
+    }
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    g.userData.brake = brake;
+    scene.add(g);
+    return g;
+  }
+  function buildPerson(p) {
+    const g = new T.Group();
+    const legs = new T.Mesh(new T.CylinderGeometry(0.14, 0.16, 0.8, 6), pantsMat); legs.position.y = 0.4; g.add(legs);
+    const body = new T.Mesh(new T.CylinderGeometry(0.2, 0.24, 0.7, 8), matOf(p.shirt)); body.position.y = 1.15; g.add(body);
+    const head = new T.Mesh(new T.SphereGeometry(0.15, 10, 8), skinMat); head.position.y = 1.65; g.add(head);
+    const hair = new T.Mesh(new T.SphereGeometry(0.155, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), dark); hair.position.y = 1.67; g.add(hair);
+    g.scale.setScalar(1.25);                                            // a bit bigger, so you can see them
+    scene.add(g);
+    return g;
+  }
+  const vMesh = new Map(), pMesh = new Map();
+  const LAMP_COLOR = { G: 0x2fd27a, Y: 0xffb020, R: 0xff3040 };
+
+  // ----- day and night
+  const DAY = new T.Color(0x9cc6ee), DUSK = new T.Color(0xf0a070), NIGHT = new T.Color(0x0b1226), sky = new T.Color();
+  function lightUp() {
+    const dl = 1 - darkness() / 0.55;                                    // 1 = day, 0 = night
+    if (dl > 0.5) sky.copy(DUSK).lerp(DAY, (dl - 0.5) * 2); else sky.copy(NIGHT).lerp(DUSK, dl * 2);
+    scene.background = sky; scene.fog.color = sky;
+    const h = (clock / 60) % 24, ang = ((h - 6) / 12) * Math.PI;             // the sun crosses the sky from 6:00 to 18:00
+    sun.position.set(W / 2 + Math.cos(ang) * 300, 120 + Math.max(0, Math.sin(ang)) * 260, H / 2 - 160);
+    sun.intensity = 0.1 + 1.05 * dl; hemi.intensity = 0.22 + 0.45 * dl;
+    const night = 1 - dl;
+    for (const m of sideMats) m.emissiveIntensity = 1.1 * night;
+    bulbMat.emissiveIntensity = 2.2 * night; headlightMat.emissiveIntensity = 0.2 + 2.5 * night;
+    junctionLights.forEach(l => l.intensity = 1.6 * night);
+    greenMats.forEach(m => m.opacity = 0.4 - 0.16 * night);            // the tint is not lit: softer on the dark road
+  }
+
+  function resize() {
+    const r = c3.getBoundingClientRect();
+    if (!r.width) return;
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setSize(r.width, r.height, false);
+    camera.aspect = r.width / r.height; camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize", resize);
+
+  function render() {
+    // vehicles
+    for (const sh of shown.vehicles) {
+      let m = vMesh.get(sh.v);
+      if (!m) { m = buildVehicle(sh.v); vMesh.set(sh.v, m); }
+      m.position.set(sh.x, 0, sh.y); m.rotation.y = -sh.a;
+      m.userData.brake.emissiveIntensity = sh.braking ? 2.2 : 0.25;
+    }
+    const onScreenV = new Set(shown.vehicles.map(sh => sh.v));
+    for (const [v, m] of vMesh) if (!onScreenV.has(v)) { scene.remove(m); vMesh.delete(v); }
+    // people
+    for (const sh of shown.people) {
+      let m = pMesh.get(sh.p);
+      if (!m) { m = buildPerson(sh.p); pMesh.set(sh.p, m); }
+      m.position.set(sh.x, sh.walking ? Math.abs(Math.sin(sh.phase)) * 0.06 : 0, sh.y);
+      m.rotation.y = -sh.a + Math.PI / 2; m.rotation.z = sh.walking ? Math.sin(sh.phase) * 0.06 : 0;
+    }
+    const onScreenP = new Set(shown.people.map(sh => sh.p));
+    for (const [p, m] of pMesh) if (!onScreenP.has(p)) { scene.remove(m); pMesh.delete(p); }
+    // lights
+    for (const s of signals) { s.main.material.color.setHex(LAMP_COLOR[signalFor(s.j, s.head, "S")]); s.left.material.color.setHex(LAMP_COLOR[signalFor(s.j, s.head, "L")]); }
+    const blink = Math.floor(performance.now() / 300) % 2;
+    for (const w of walkLamps) w.m.material.color.setHex(w.j.stage === "walk" || (w.j.stage === "flash" && blink) ? 0x2fd27a : 0xff3040);
+    GREENS.forEach((g, i) => { const c = greenOf(g); greenMeshes[i].visible = !!c; if (c) greenMats[g.j.id].color.copy(TINT3[c]); });
+    const sj = JUNCTIONS[selected]; ring.position.x = sj.x; ring.position.z = sj.y;
+    placeLabels();
+    lightUp();
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  // ----- labels next to the lights: projected from 3D to the screen every frame
+  const P = new T.Vector3();
+  function place(el, at, show) {
+    P.copy(at).project(camera);
+    const vis = show && P.z < 1 && Math.abs(P.x) < 1.05 && Math.abs(P.y) < 1.05;
+    el.style.display = vis ? "" : "none";
+    if (vis) { el.style.left = ((P.x + 1) / 2 * c3.clientWidth) + "px"; el.style.top = ((1 - P.y) / 2 * c3.clientHeight) + "px"; }
+  }
+  const STAGE_CLASS = { green: "g", walk: "g", yellow: "y", flash: "y", allred: "r" };
+  // one traffic light, drawn: housing with the main lamps + the left-turn arrow lamp
+  function lightHTML(j, head) {
+    const m = signalFor(j, head, "S"), l = signalFor(j, head, "L");
+    return `<span class="tl"><span class="arw ${l}">←</span><span class="hous"><i class="r${m === "R" ? " on" : ""}"></i>` +
+           `<i class="y${m === "Y" ? " on" : ""}"></i><i class="g${m === "G" ? " on" : ""}"></i></span></span>`;
+  }
+  const FROM_TITLE = { S: "cars from the north", N: "cars from the south", W: "cars from the east", E: "cars from the west" };
+  function placeLabels() {
+    const near = camera.position.distanceTo(controls.target) < 170;     // zoomed in: lights on the poles; out: one badge per crossing
+    const blink = Math.floor(performance.now() / 300) % 2;
+    for (const s of signals) {
+      const html = lightHTML(s.j, s.head);
+      if (s.tag.innerHTML !== html) { s.tag.innerHTML = html; s.tag.title = `${s.j.name}: ${FROM_TITLE[s.head]}`; }
+      place(s.tag, s.at, near);
+    }
+    for (const b of badges) {
+      const j = b.j, walk = j.stage === "walk" ? " on" : j.stage === "flash" && blink ? " blink" : "";
+      // the picture is the crossing seen from above: the light at the top is for cars coming from the north
+      const html = `<span class="id" title="its id: the key in decide()'s answer">#${j.id}</span>` +
+                   `<span class="n" title="${FROM_TITLE.S}">${lightHTML(j, "S")}</span>` +
+                   `<span class="w" title="${FROM_TITLE.E}">${lightHTML(j, "E")}</span>` +
+                   `<span class="c walker${walk}" title="people">🚶</span>` +
+                   `<span class="e" title="${FROM_TITLE.W}">${lightHTML(j, "W")}</span>` +
+                   `<span class="s" title="${FROM_TITLE.N}">${lightHTML(j, "N")}</span>`;
+      if (b.el.innerHTML !== html) { b.el.innerHTML = html; b.el.title = j.name; }
+      place(b.el, b.at, !near);
+    }
+    idTags.forEach(t => place(t.el, t.at, near));
+  }
+
+  // click a crossing to select it (a click, not a drag)
+  let down = null;
+  c3.addEventListener("pointerdown", e => { down = [e.clientX, e.clientY]; });
+  c3.addEventListener("pointerup", e => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+    const r = c3.getBoundingClientRect(), ray = new T.Raycaster();
+    ray.setFromCamera({ x: (e.clientX - r.left) / r.width * 2 - 1, y: -(e.clientY - r.top) / r.height * 2 + 1 }, camera);
+    const hit = ray.intersectObject(ground)[0];
+    if (!hit) return;
+    const j = JUNCTIONS.find(j => Math.abs(hit.point.x - j.x) < STOP + 6 && Math.abs(hit.point.z - j.y) < STOP + 6);
+    if (j) { selected = j.id; document.getElementById("j" + j.id).scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+  });
+
+  const api = {
+    on: false, renderer, camera, controls,
+    render,
+    set(on) {
+      api.on = on;
+      c3.hidden = !on; document.getElementById("c").hidden = on; labels.hidden = !on;
+      document.getElementById("viewBtn").textContent = on ? "2D map" : "3D city";
+      document.getElementById("helpText").textContent = on ? "Drag to rotate · right-drag to move · wheel to zoom · click a crossing to select it"
+                                                                         : "Drag to move · wheel to zoom · click a crossing to select it";
+      if (on) resize(); else window.dispatchEvent(new Event("resize"));
+      try { localStorage.setItem("fourCrossingsView", on ? "3d" : "2d"); } catch { /* private mode */ }
+    },
+    focus(id) { const j = JUNCTIONS[id]; controls.target.set(j.x, 0, j.y); camera.position.set(j.x - 30, 70, j.y + 45); },
+    greens: () => Object.fromEntries(GREENS.filter((g, i) => greenMeshes[i].visible)          // the bands tinted in the last frame
+                                       .map(g => [g.key, greenMats[g.j.id].color.equals(TINT3.Y) ? "Y" : "G"])),
+  };
+  document.getElementById("viewBtn").onclick = () => api.set(!api.on);
+  let saved = null; try { saved = localStorage.getItem("fourCrossingsView"); } catch { /* ignore */ }
+  api.set(saved !== "2d");
+  return api;
+})();
+window.city.view3d = on => window.VIEW3D && window.VIEW3D.set(on);
+</script>
+</body>
+</html>

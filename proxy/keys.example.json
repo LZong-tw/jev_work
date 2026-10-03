@@ -1,0 +1,16 @@
+[
+  {
+    "name": "local-dev",
+    "key": "jvp_local_dev_only_change_me",
+    "rpm": 120
+  },
+  {
+    "name": "team-01",
+    "key_hash": "put-the-sha256-of-the-key-here (npm run keys does this for you)",
+    "enabled": true,
+    "rpm": 60,
+    "daily_requests": 2000,
+    "max_cost_usd": 0.5,
+    "expires_at": "2026-10-02T00:00:00+08:00"
+  }
+]

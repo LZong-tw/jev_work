@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>City Replay 3D</title>
+<style>
+  :root {
+    --panel: rgba(255, 255, 255, 0.88); --ink: #1d1d1f; --muted: #5d5d63; --line: rgba(0, 0, 0, 0.12);
+    --ns: #2f7de1; --ew: #e8833a; --walk: #2fa36b; --yellow: #e0a800; --bad: #d64545; --good: #2fa36b;
+    --sky: #bfe3ff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --panel: rgba(24, 25, 28, 0.88); --ink: #ececee; --muted: #a3a3ab; --line: rgba(255, 255, 255, 0.14); }
+  }
+  :root[data-theme="dark"] { --panel: rgba(24, 25, 28, 0.88); --ink: #ececee; --muted: #a3a3ab; --line: rgba(255, 255, 255, 0.14); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--sky); color: var(--ink);
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #scene { position: fixed; inset: 0; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    backdrop-filter: blur(6px); padding: 10px 12px; }
+  #top { top: 12px; left: 12px; right: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  #top h1 { font-size: 16px; margin: 0 6px 0 0; white-space: nowrap; }
+  button, select { font: inherit; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: transparent; color: var(--ink); cursor: pointer; }
+  input[type=range] { flex: 1; min-width: 120px; }
+  .stat { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .stat b { font-size: 16px; }
+  .muted { color: var(--muted); }
+  #side { top: 74px; right: 12px; width: 280px; max-height: calc(100% - 150px); overflow: auto; }
+  #side h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 4px 0 6px; }
+  .j { border-top: 1px solid var(--line); padding: 6px 4px; cursor: pointer; border-radius: 6px; }
+  .j:hover { background: var(--line); }
+  .j .head { display: flex; justify-content: space-between; font-weight: 600; gap: 6px; }
+  .pbar { display: grid; grid-template-columns: 92px 1fr 34px; gap: 6px; align-items: center; font-size: 12px; }
+  .pbar .track { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .pbar .fill { height: 100%; border-radius: 4px; }
+  #legend { left: 12px; bottom: 12px; font-size: 12px; display: flex; gap: 12px; flex-wrap: wrap; max-width: calc(100% - 24px); }
+  #legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .label { position: fixed; transform: translate(-50%, -100%); pointer-events: none; padding: 2px 8px; border-radius: 99px;
+    font: 600 12px system-ui; color: #fff; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  .label.out { background: var(--bad); }
+  .empty { position: fixed; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; }
+  .empty div { background: var(--panel); border-radius: 12px; padding: 24px; max-width: 520px; }
+  code { font-family: ui-monospace, monospace; }
+  @media (max-width: 700px) { #side { display: none; } }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="labels"></div>
+<div id="ui"></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="runs/runs.js"></script>
+<script>
+/*
+ * City Replay 3D: the same runs as viewer.html, drawn as a little 3D city.
+ * Data: runs/runs.js (written by run.py). Every road cell is one unit in the 3D world,
+ * with exactly the same geometry as City.render() in city.py.
+ */
+const RUNS = (window.JUNCTION_RUNS || []).slice().sort((a, b) => a.run - b.run);
+const ui = document.getElementById('ui');
+
+
+function start() {
+  ui.innerHTML = `
+  <div id="top" class="panel">
+    <h1>🚦 City Replay 3D</h1>
+    <select id="run"></select>
+    <button id="play">▶ Play</button>
+    <input id="tick" type="range" min="0" value="0" aria-label="tick">
+    <select id="speed" aria-label="speed"><option value="1200">slow</option><option value="700" selected>normal</option><option value="300">fast</option></select>
+    <span class="stat">tick <b id="sTick">-</b></span>
+    <span class="stat">score <b id="sScore">-</b></span>
+    <span class="stat">energy <b id="sEnergy">-</b></span>
+    <span class="stat">this tick <b id="sReward">-</b></span>
+    <span class="stat" id="sWeather"></span>
+    <span class="stat" id="sBeat" title="Jev's prediction: will this run beat the best past run?"></span>
+    <button id="overview">🏙 overview</button>
+    <a href="viewer.html" class="muted">2D view</a>
+  </div>
+  <div id="side" class="panel"><h2>The officers' decisions · click one to zoom</h2><div id="decisions"></div></div>
+  <div id="legend" class="panel">
+    <span><i style="background:#ffd23f"></i>car (taxi)</span><span><i style="background:#7cc4ff"></i>scooter</span>
+    <span><i style="background:#2e9e5b"></i>bus</span><span><i style="background:#fff;border:1px solid #d64545"></i>ambulance</span>
+    <span><i style="background:#ff3b30"></i>brake light = stopped</span><span><i style="background:#2fa36b"></i>pedestrians</span>
+    <span>👮 officer: arms point along the road that may go · both arms up = walk · one arm up = changing</span>
+    <span><i style="background:#fff3b0;border:1px solid #d8c66a"></i>what an officer can see</span>
+    <span>bubble = Jev's probabilities: <b style="color:#2f7de1">↕</b> <b style="color:#e8833a">↔</b> <b style="color:#2fa36b">walk</b></span>
+    <span class="muted">drag to turn · scroll to zoom · right-drag to move</span>
+  </div>`;
+
+  const runSel = document.getElementById('run');
+  RUNS.forEach((r, i) => runSel.add(new Option(`run ${r.run} · ${r.policy} · ${r.score}${r.exam ? ' · EXAM' : ''}`, i)));
+  runSel.value = RUNS.length - 1;
+
+  const world = makeWorld();
+  let run = null, t = 0, playing = false, tickStart = performance.now();
+  const tickEl = document.getElementById('tick'), playBtn = document.getElementById('play');
+  const speedEl = document.getElementById('speed');
+
+  function load() {
+    run = RUNS[+runSel.value];
+    world.build(run.layout);
+    tickEl.max = run.trace.length - 1;
+    setTick(0);
+  }
+  function setTick(n) {
+    t = Math.max(0, Math.min(run.trace.length - 1, n));
+    tickEl.value = t;
+    tickStart = performance.now();
+    panel(run, t);
+  }
+  runSel.onchange = load;
+  document.getElementById('decisions').onclick = (e) => {
+    const j = e.target.closest('.j');
+    if (j) world.focus(j.dataset.jid);
+  };
+  document.getElementById('overview').onclick = () => world.overview();
+  tickEl.oninput = () => setTick(+tickEl.value);
+  playBtn.onclick = () => {
+    playing = !playing;
+    if (playing && t >= run.trace.length - 1) setTick(0);
+    tickStart = performance.now();
+    playBtn.textContent = playing ? '⏸ Pause' : '▶ Play';
+  };
+  load();
+  const hash = new URLSearchParams(location.hash.slice(1));
+  if (hash.get('focus')) world.focus(hash.get('focus'));   // e.g. viewer3d.html#focus=fuxing_renai
+  if (hash.get('tick')) setTick(+hash.get('tick'));
+
+  function frame(now) {
+    const dur = +speedEl.value;
+    let u = playing ? (now - tickStart) / dur : 1;
+    if (playing && u >= 1) {
+      if (t < run.trace.length - 1) { setTick(t + 1); u = 0; }
+      else { playing = false; playBtn.textContent = '▶ Play'; u = 1; }
+    }
+    world.draw(run.trace[t], Math.min(1, Math.max(0, u)), now / 1000);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------------------------------------------------------------- side panel
+const ACTION_ICON = { north_south: '↕', east_west: '↔', walk: '🚶' };
+const PHASE_COLOR = { NS: '#2f7de1', EW: '#e8833a', WALK: '#2fa36b' };
+
+function panel(run, t) {
+  const s = run.trace[t];
+  document.getElementById('sTick').textContent = `${s.t + 1}/${run.trace.length}`;
+  document.getElementById('sScore').textContent = (s.score_after ?? s.score).toFixed(1);
+  document.getElementById('sEnergy').textContent = s.energy_after ?? '-';
+  const r = s.reward ?? 0;
+  const rEl = document.getElementById('sReward');
+  rEl.textContent = (r >= 0 ? '+' : '') + r.toFixed(1);
+  rEl.style.color = r >= 0 ? 'var(--good)' : 'var(--bad)';
+  document.getElementById('sWeather').textContent = s.weather === 'rain' ? '🌧 rain' : '☀️ dry';
+  let beat = null; // the latest prediction at or before this tick
+  for (let i = t; i >= 0 && beat == null; i--) beat = run.trace[i].decision && run.trace[i].decision.beat_best;
+  document.getElementById('sBeat').textContent = beat == null ? '' : `🔮 ${Math.round(beat * 100)}% beat best`;
+  const info = (s.decision && s.decision.junctions) || {};
+  document.getElementById('decisions').innerHTML = Object.entries(run.layout.junctions).map(([jid, j]) => {
+    const action = (s.actions || {})[jid];
+    const locked = (s.forced || []).includes(jid);
+    const d = info[jid] || {};
+    const probs = d.probabilities || {};
+    const bars = Object.keys(ACTION_ICON).map((a) => {
+      const p = probs[a];
+      if (p == null) return '';
+      const col = a === 'walk' ? PHASE_COLOR.WALK : a === 'north_south' ? PHASE_COLOR.NS : PHASE_COLOR.EW;
+      return `<div class="pbar"><span${a === action ? ' style="font-weight:700"' : ''}>${ACTION_ICON[a]} ${a}</span>
+        <span class="track"><span class="fill" style="display:block;width:${(p * 100).toFixed(0)}%;background:${col}"></span></span>
+        <span>${p.toFixed(2)}</span></div>`;
+    }).join('');
+    return `<div class="j" data-jid="${jid}" title="click: fly to this officer"><div class="head"><span>${j.name.replace(' x ', ' × ')}</span>
+      <span>${ACTION_ICON[action] || ''} ${locked ? '<span class="muted">locked</span>' : ''}</span></div>
+      ${bars || `<div class="muted" style="font-size:12px">${locked ? 'light locked this tick (minimum green)' : d.rule ? 'safety ' + d.rule : 'no Jev probabilities (rules or timer)'}</div>`}</div>`;
+  }).join('');
+}
+
+// ---------------------------------------------------------------- the 3D world
+function rng(seed) { // small deterministic random generator (the city looks the same every time)
+  return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let x = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; };
+}
+
+function makeWorld() {
+  const host = document.getElementById('scene');
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  host.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 500);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.maxPolarAngle = Math.PI * 0.47;
+
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x6a8f5a, 0.75);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xfff2dd, 0.9);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  scene.add(sun, sun.target);
+
+  const mat = (color, extra = {}) => new THREE.MeshLambertMaterial({ color, ...extra });
+  const M = {
+    grass: mat(0x8cc66b), asphalt: mat(0x3b3e44), box: mat(0x34373c), walk: mat(0xd9d6cc), white: mat(0xf4f4f0),
+    trunk: mat(0x7a5634), leaf: mat(0x4e9a4a), leaf2: mat(0x69b35a), roof: mat(0x9aa0a6),
+    taxi: mat(0xffd23f), scooter: mat(0x7cc4ff), bus: mat(0x2e9e5b), amb: mat(0xffffff), glass: mat(0x2a3b4c),
+    rider: mat(0x333333), stripe: mat(0xd64545), skin: mat(0xf0c9a0),
+    brake: new THREE.MeshBasicMaterial({ color: 0xff3b30 }), off: mat(0x552222),
+    red: new THREE.MeshBasicMaterial({ color: 0xff3b30 }), amber: new THREE.MeshBasicMaterial({ color: 0xffc107 }),
+    green: new THREE.MeshBasicMaterial({ color: 0x33dd66 }), dark: mat(0x222222), blue: new THREE.MeshBasicMaterial({ color: 0x2f7de1 }),
+    uniform: mat(0x24324f), vest: mat(0xc6f13a),
+  };
+  const PEOPLE = [0xe85d75, 0x4a7fd6, 0xf2b134, 0x7a5cc7, 0x2fa36b, 0xe8833a].map((c) => mat(c));
+  const windowTex = makeWindowTexture();
+
+  const geo = {
+    box: new THREE.BoxGeometry(1, 1, 1), cyl: new THREE.CylinderGeometry(0.5, 0.5, 1, 10),
+    sphere: new THREE.SphereGeometry(0.5, 12, 10), cone: new THREE.ConeGeometry(0.5, 1, 10),
+  };
+  const mesh = (g, m, sx, sy, sz, x = 0, y = 0, z = 0, shadow = true) => {
+    const o = new THREE.Mesh(geo[g], m);
+    o.scale.set(sx, sy, sz); o.position.set(x, y, z);
+    o.castShadow = shadow; o.receiveShadow = true;
+    return o;
+  };
+
+  let city = null, G = null, layoutKey = '';
+  const pools = { car: [], scooter: [], bus: [], amb: [], ped: [] };
+  const labels = document.getElementById('labels');
+  let rain = null;
+
+  function resize() {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- static city: ground, blocks, buildings, roads, crossings, traffic lights
+  function build(layout) {
+    const key = JSON.stringify(layout);
+    if (key === layoutKey) return;
+    layoutKey = key;
+    if (city) scene.remove(city);
+    for (const J of Object.values((G && G.junctions) || {})) {
+      scene.remove(J.officer.root, J.bubble, J.ring);
+      J.label.remove();
+    }
+    for (const k of Object.keys(pools)) { pools[k].forEach((o) => scene.remove(o)); pools[k] = []; }
+    city = new THREE.Group();
+    scene.add(city);
+    G = geometry(layout);
+    const { w, h, L } = G;
+    const R = rng(7);
+
+    const ground = mesh('box', M.grass, w + 60, 0.2, h + 60, w / 2, -0.1, h / 2, false);
+    city.add(ground);
+
+    // roads: one strip per junction row and column, two lanes wide, plus lane dashes
+    const rowsAt = [...new Set(Object.values(layout.junctions).map((j) => G.corner(j)[1]))];
+    const colsAt = [...new Set(Object.values(layout.junctions).map((j) => G.corner(j)[0]))];
+    for (const r0 of rowsAt) {
+      city.add(mesh('box', M.asphalt, w + 60, 0.04, 2, w / 2, 0.02, r0 + 1, false));
+      for (let x = -28; x < w + 28; x += 1) if (!colsAt.some((c0) => x >= c0 - 0.5 && x <= c0 + 2)) {
+        city.add(mesh('box', M.white, 0.45, 0.01, 0.06, x + 0.5, 0.045, r0 + 1, false));
+      }
+    }
+    for (const c0 of colsAt) {
+      city.add(mesh('box', M.asphalt, 2, 0.041, h + 60, c0 + 1, 0.02, h / 2, false));
+      for (let z = -28; z < h + 28; z += 1) if (!rowsAt.some((r0) => z >= r0 - 0.5 && z <= r0 + 2)) {
+        city.add(mesh('box', M.white, 0.06, 0.011, 0.45, c0 + 1, 0.046, z + 0.5, false));
+      }
+    }
+
+    // blocks between the roads: a sidewalk slab, then buildings or a park
+    const cuts = (at, size) => {
+      const edges = [-28, ...at.flatMap((a) => [a, a + 2]).sort((a, b) => a - b), size + 28];
+      const out = [];
+      for (let i = 0; i < edges.length; i += 2) out.push([edges[i], edges[i + 1]]);
+      return out;
+    };
+    for (const [x0, x1] of cuts(colsAt, w)) for (const [z0, z1] of cuts(rowsAt, h)) {
+      const bw = x1 - x0, bd = z1 - z0;
+      city.add(mesh('box', M.walk, bw - 0.1, 0.12, bd - 0.1, (x0 + x1) / 2, 0.06, (z0 + z1) / 2));
+      const inside = x0 >= 0 && x1 <= w && z0 >= 0 && z1 <= h;
+      const park = inside && R() < 0.25;
+      fillBlock(x0 + 0.6, z0 + 0.6, x1 - 0.6, z1 - 0.6, park, inside, R);
+    }
+
+    // what each officer can see: a light strip on the last `vision` cells of every road
+    if (layout.vision) {
+      const sight = new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.38, depthWrite: false });
+      for (const road of Object.values(layout.roads)) {
+        const [x0, z0] = G.point(road, layout.length - layout.vision);
+        const [x1, z1] = G.point(road, layout.length - 1);
+        const strip = new THREE.Mesh(geo.box, sight);
+        strip.scale.set(Math.abs(x1 - x0) + 0.9, 0.01, Math.abs(z1 - z0) + 0.9);
+        strip.position.set((x0 + x1) / 2, 0.047, (z0 + z1) / 2);
+        city.add(strip);
+      }
+    }
+
+    // junction boxes, crosswalks and traffic lights
+    G.junctions = {};
+    for (const [jid, j] of Object.entries(layout.junctions)) {
+      const [c0, r0] = G.corner(j);
+      const floor = new THREE.Mesh(geo.box, new THREE.MeshLambertMaterial({ color: 0x34373c }));
+      floor.scale.set(2, 0.05, 2); floor.position.set(c0 + 1, 0.025, r0 + 1); floor.receiveShadow = true;
+      city.add(floor);
+      const glow = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.8, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 }));
+      glow.rotation.x = -Math.PI / 2; glow.position.set(c0 + 1, 0.06, r0 + 1);
+      city.add(glow);
+      for (const side of ['north', 'south', 'east', 'west']) zebra(c0, r0, side);
+      const heads = { NS: [], EW: [] };
+      // one pole per corner; north/south poles show the NS light, east/west poles the EW light
+      for (const [dx, dz, axis] of [[-0.25, -0.25, 'NS'], [2.25, 2.25, 'NS'], [2.25, -0.25, 'EW'], [-0.25, 2.25, 'EW']]) {
+        const pole = mesh('cyl', M.dark, 0.08, 1.5, 0.08, c0 + dx, 0.75, r0 + dz);
+        const head = mesh('box', M.dark, 0.22, 0.55, 0.22, c0 + dx, 1.55, r0 + dz);
+        const lamps = [0.17, 0, -0.17].map((dy) => {
+          const l = mesh('sphere', M.off, 0.13, 0.13, 0.13, c0 + dx, 1.55 + dy, r0 + dz, false);
+          city.add(l); return l;
+        });
+        city.add(pole, head);
+        heads[axis].push(lamps);
+      }
+      const label = document.createElement('div');
+      label.className = 'label';
+      labels.appendChild(label);
+      G.junctions[jid] = { c0, r0, glow, heads, label, name: j.name, ...officer(c0 + 1, r0 + 1) };
+    }
+
+    // rain particles
+    if (rain) scene.remove(rain);
+    const n = 5000, pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { pos[i * 3] = R() * (w + 20) - 10; pos[i * 3 + 1] = R() * 14; pos[i * 3 + 2] = R() * (h + 20) - 10; }
+    const rg = new THREE.BufferGeometry();
+    rg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    rain = new THREE.Points(rg, new THREE.PointsMaterial({ color: 0xdde8ff, size: 0.12, transparent: true, opacity: 0.8 }));
+    scene.add(rain);
+
+    // camera and sun
+    const cx = w / 2, cz = h / 2, size = Math.max(w * 0.7, h); // wide maps (a street) can come closer
+    controls.target.set(cx, 0, cz);
+    const k = Math.max(1, 0.85 / camera.aspect); // narrow screen: step back
+    camera.position.set(cx + size * 0.32 * k, size * 0.95 * k, cz + size * 0.72 * k);
+    sun.position.set(cx - size * 0.6, size * 1.2, cz + size * 0.4);
+    sun.target.position.set(cx, 0, cz);
+    const sc = sun.shadow.camera;
+    sc.left = -size; sc.right = size; sc.top = size; sc.bottom = -size; sc.far = size * 4;
+    sc.updateProjectionMatrix();
+    controls.update();
+  }
+
+  // ---------- the traffic officer: podium, body, arms on shoulder pivots, a thought bubble, a whistle ring
+  function officer(x, z) {
+    const root = new THREE.Group();
+    root.position.set(x, 0.05, z);
+    root.scale.setScalar(1.6);
+    root.add(mesh('cyl', M.white, 0.46, 0.1, 0.46, 0, 0.05, 0));
+    root.add(mesh('cyl', M.stripe, 0.47, 0.03, 0.47, 0, 0.08, 0, false));
+    const body = new THREE.Group();
+    body.position.y = 0.1;
+    root.add(body);
+    body.add(mesh('box', M.uniform, 0.1, 0.32, 0.09, 0, 0.16, -0.06));  // legs
+    body.add(mesh('box', M.uniform, 0.1, 0.32, 0.09, 0, 0.16, 0.06));
+    body.add(mesh('box', M.vest, 0.17, 0.3, 0.3, 0, 0.47, 0));         // high-vis vest
+    body.add(mesh('box', M.white, 0.175, 0.04, 0.305, 0, 0.47, 0, false)); // reflective stripe
+    body.add(mesh('sphere', M.skin, 0.17, 0.17, 0.17, 0, 0.7, 0));
+    body.add(mesh('cyl', M.white, 0.2, 0.05, 0.2, 0, 0.78, 0));          // cap
+    body.add(mesh('box', M.dark, 0.1, 0.02, 0.18, 0.06, 0.765, 0, false)); // visor
+    const arms = [0.17, -0.17].map((side) => {
+      const pivot = new THREE.Group();
+      pivot.position.set(0, 0.59, side);
+      pivot.add(mesh('box', M.uniform, 0.07, 0.26, 0.07, 0, -0.13, 0));
+      pivot.add(mesh('box', M.white, 0.075, 0.07, 0.075, 0, -0.29, 0)); // white glove
+      body.add(pivot);
+      return pivot;
+    });
+    scene.add(root);
+
+    // thought bubble: always faces the camera; three bars = Jev's probabilities
+    const bubble = new THREE.Group();
+    bubble.position.set(x, 2.75, z);
+    bubble.scale.setScalar(1.5);
+    const card = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.95), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
+    bubble.add(card);
+    const bars = ['north_south', 'east_west', 'walk'].map((a, i) => {
+      const color = a === 'walk' ? PHASE_COLOR.WALK : a === 'north_south' ? PHASE_COLOR.NS : PHASE_COLOR.EW;
+      const bar = new THREE.Mesh(geo.box, new THREE.MeshBasicMaterial({ color }));
+      bar.position.set(-0.32 + i * 0.32, -0.38, 0.01);
+      bar.scale.set(0.22, 0.01, 0.02);
+      bubble.add(bar);
+      return { action: a, bar, shown: 0 };
+    });
+    const tick = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.12, 3), new THREE.MeshBasicMaterial({ color: 0x1d1d1f }));
+    tick.rotation.z = Math.PI;
+    bubble.add(tick);
+    scene.add(bubble);
+
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.9, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(x, 0.07, z);
+    scene.add(ring);
+    return { officer: { root, body, arms, yaw: 0, armAngles: [0, 0] }, bubble, bars, tick, ring, lastSwitch: -1 };
+  }
+
+  function zebra(c0, r0, side) {
+    // white stripes across the road, right at the edge of the junction box
+    for (let i = 0; i < 6; i++) {
+      const off = 0.17 + i * 0.33;
+      if (side === 'north') city.add(mesh('box', M.white, 0.16, 0.012, 0.42, c0 + off, 0.05, r0 - 0.25, false));
+      if (side === 'south') city.add(mesh('box', M.white, 0.16, 0.012, 0.42, c0 + off, 0.05, r0 + 2.25, false));
+      if (side === 'west') city.add(mesh('box', M.white, 0.42, 0.012, 0.16, c0 - 0.25, 0.05, r0 + off, false));
+      if (side === 'east') city.add(mesh('box', M.white, 0.42, 0.012, 0.16, c0 + 2.25, 0.05, r0 + off, false));
+    }
+  }
+
+  function fillBlock(x0, z0, x1, z1, park, inside, R) {
+    if (park) {
+      city.add(mesh('box', M.grass, x1 - x0, 0.14, z1 - z0, (x0 + x1) / 2, 0.1, (z0 + z1) / 2, false));
+      for (let i = 0; i < 14; i++) tree(x0 + 0.5 + R() * (x1 - x0 - 1), z0 + 0.5 + R() * (z1 - z0 - 1), R);
+      return;
+    }
+    const COLORS = [0xe9d8c4, 0xd7e3ea, 0xf1e3b5, 0xcfd8c9, 0xe6cfd6, 0xc9cfe6, 0xf0efe9, 0xd9c7b3];
+    const step = 2.2;
+    for (let x = x0; x + 1.4 <= x1; x += step) for (let z = z0; z + 1.4 <= z1; z += step) {
+      if (R() < 0.12) { tree(x + 0.9, z + 0.9, R); continue; }
+      const sx = 1.4 + R() * 0.6, sz = 1.4 + R() * 0.6;
+      const tall = inside ? 0.8 + R() * R() * 5.5 : 0.6 + R() * 2.2; // a few towers, many low shops
+      const color = COLORS[Math.floor(R() * COLORS.length)];
+      const m = new THREE.MeshLambertMaterial({ color, map: windowTex.clone() });
+      m.map.repeat.set(Math.max(1, Math.round(sx * 1.5)), Math.max(1, Math.round(tall * 1.5)));
+      m.map.needsUpdate = true;
+      const b = mesh('box', m, sx, tall, sz, x + sx / 2, tall / 2 + 0.12, z + sz / 2);
+      city.add(b);
+      city.add(mesh('box', M.roof, sx * 0.96, 0.08, sz * 0.96, x + sx / 2, tall + 0.16, z + sz / 2));
+      if (tall > 5 && R() < 0.5) city.add(mesh('box', M.roof, 0.5, 0.5, 0.5, x + sx / 2, tall + 0.45, z + sz / 2));
+    }
+  }
+
+  function tree(x, z, R) {
+    const s = 0.6 + R() * 0.5;
+    city.add(mesh('cyl', M.trunk, 0.12 * s, 0.5 * s, 0.12 * s, x, 0.25 * s + 0.12, z));
+    city.add(mesh('sphere', R() < 0.5 ? M.leaf : M.leaf2, 0.8 * s, 0.8 * s, 0.8 * s, x, 0.75 * s + 0.12, z));
+  }
+
+  // ---------- moving things: vehicles and pedestrians (pooled meshes)
+  function vehicle(kind) {
+    const g = new THREE.Group();
+    if (kind === 'car') {
+      g.add(mesh('box', M.taxi, 0.72, 0.22, 0.42, 0, 0.17, 0));
+      g.add(mesh('box', M.glass, 0.38, 0.16, 0.36, -0.04, 0.35, 0));
+      g.add(mesh('box', M.white, 0.12, 0.05, 0.16, -0.04, 0.45, 0)); // taxi sign
+    } else if (kind === 'scooter') {
+      g.add(mesh('box', M.scooter, 0.48, 0.14, 0.16, 0, 0.14, 0));
+      g.add(mesh('box', M.rider, 0.14, 0.3, 0.14, -0.04, 0.36, 0));
+      g.add(mesh('sphere', M.scooter, 0.15, 0.15, 0.15, -0.04, 0.58, 0));
+    } else if (kind === 'bus') {
+      g.add(mesh('box', M.bus, 0.96, 0.5, 0.46, 0, 0.33, 0));
+      g.add(mesh('box', M.glass, 0.9, 0.14, 0.47, 0, 0.42, 0));
+      g.add(mesh('box', M.white, 0.96, 0.04, 0.47, 0, 0.6, 0));
+    } else {
+      g.add(mesh('box', M.amb, 0.78, 0.36, 0.44, 0, 0.24, 0));
+      g.add(mesh('box', M.stripe, 0.79, 0.06, 0.45, 0, 0.24, 0));
+      const a = mesh('box', M.red, 0.1, 0.06, 0.16, 0.05, 0.45, -0.06, false);
+      const b = mesh('box', M.blue, 0.1, 0.06, 0.16, 0.05, 0.45, 0.06, false);
+      g.add(a, b);
+      g.userData.beacons = [a, b];
+    }
+    const brake = mesh('box', M.brake, 0.03, 0.06, kind === 'scooter' ? 0.08 : 0.3, kind === 'bus' ? -0.49 : -0.37, 0.2, 0, false);
+    g.add(brake);
+    g.userData.brake = brake;
+    scene.add(g);
+    return g;
+  }
+  function person(i) {
+    const g = new THREE.Group();
+    g.add(mesh('cyl', PEOPLE[i % PEOPLE.length], 0.17, 0.4, 0.17, 0, 0.32, 0));
+    g.add(mesh('sphere', M.skin, 0.17, 0.17, 0.17, 0, 0.6, 0));
+    scene.add(g);
+    return g;
+  }
+  function take(kind, i) {
+    const pool = pools[kind];
+    while (pool.length <= i) pool.push(kind === 'ped' ? person(pool.length) : vehicle(kind));
+    pool[i].visible = true;
+    return pool[i];
+  }
+  const KIND = { c: 'car', s: 'scooter', B: 'bus', A: 'amb' };
+  const HEADING = { west: 0, east: Math.PI, north: -Math.PI / 2, south: Math.PI / 2 }; // rotation.y per approach
+
+  let lastTime = 0;
+  const approach = (cur, target, k) => cur + (target - cur) * k;
+
+  function animateOfficer(J, s, jid, u, time, info) {
+    const o = J.officer;
+    const k = 1 - Math.exp(-Math.max(0, time - lastTime) * 7); // smooth, frame-rate independent
+    const action = (s.actions || {})[jid];
+    const [phaseAfter, yellowAfter] = (s.lights_after || {})[jid] || s.lights[jid];
+    const switching = yellowAfter && u < 0.6; // the light is changing: whistle, one arm up
+    // face so the outstretched arms point along the road that may go
+    const yaw = action === 'east_west' ? Math.PI / 2 : action === 'north_south' ? 0 : o.yaw;
+    let d = yaw - o.yaw;
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    o.yaw += d * k;
+    o.body.rotation.y = o.yaw;
+    // arm angles around the shoulder: 0 = down, ±PI/2 = out to the side, PI = straight up
+    let left, right;
+    if (phaseAfter === 'WALK' && !yellowAfter) {
+      left = right = Math.PI * 0.95 + Math.sin(time * 3) * 0.05; // both arms up: all vehicles stop
+    } else if (switching) {
+      left = -0.2; right = Math.PI * 0.97;                        // stop sign with one arm
+    } else {
+      const wave = Math.sin(time * 5) * 0.35;                     // "come through" wave
+      left = -Math.PI / 2 + wave; right = Math.PI / 2 - wave;
+    }
+    o.armAngles[0] = approach(o.armAngles[0], left, k);
+    o.armAngles[1] = approach(o.armAngles[1], right, k);
+    o.arms[0].rotation.x = o.armAngles[0];
+    o.arms[1].rotation.x = o.armAngles[1];
+    o.root.position.y = 0.05 + Math.abs(Math.sin(time * 2)) * 0.015;
+
+    // thought bubble: bars glide to Jev's new probabilities
+    J.bubble.quaternion.copy(camera.quaternion);
+    const probs = info.probabilities;
+    J.bubble.visible = !!probs;
+    if (probs) {
+      for (const b of J.bars) {
+        b.shown = approach(b.shown, probs[b.action] || 0, k);
+        const h = 0.02 + 0.62 * b.shown;
+        b.bar.scale.y = h;
+        b.bar.position.y = -0.38 + h / 2;
+        b.bar.scale.x = b.action === action ? 0.26 : 0.2;
+        if (b.action === action) J.tick.position.set(b.bar.position.x, -0.38 + h + 0.1, 0.02);
+      }
+    }
+    // whistle: a ring spreads from the podium when the officer changes the light
+    if (yellowAfter && J.lastSwitch !== s.t) { J.lastSwitch = s.t; J.ringStart = time; }
+    const age = J.ringStart != null ? time - J.ringStart : 9;
+    J.ring.material.opacity = age < 0.8 ? 0.9 * (1 - age / 0.8) : 0;
+    J.ring.scale.setScalar(1 + age * 1.6);
+    J.ring.material.color.set(PHASE_COLOR[action === 'walk' ? 'WALK' : action === 'north_south' ? 'NS' : 'EW']);
+  }
+
+  let flight = null;
+  function focus(jid) {
+    const J = G && G.junctions[jid];
+    if (!J) return;
+    const to = new THREE.Vector3(J.c0 + 1, 0.8, J.r0 + 1);
+    flight = { from: controls.target.clone(), to, camFrom: camera.position.clone(),
+               camTo: to.clone().add(new THREE.Vector3(4.6, 5.2, 6.6)), start: performance.now() };
+  }
+  function overview() {
+    if (!G) return;
+    const size = Math.max(G.w * 0.7, G.h), k = Math.max(1, 0.85 / camera.aspect);
+    const to = new THREE.Vector3(G.w / 2, 0, G.h / 2);
+    flight = { from: controls.target.clone(), to, camFrom: camera.position.clone(),
+               camTo: new THREE.Vector3(G.w / 2 + size * 0.32 * k, size * 0.95 * k, G.h / 2 + size * 0.72 * k),
+               start: performance.now() };
+  }
+
+  function draw(s, u, time) {
+    if (!G) return;
+    if (flight) { // smooth camera flight
+      const f = Math.min(1, (performance.now() - flight.start) / 900), e = f * f * (3 - 2 * f);
+      controls.target.lerpVectors(flight.from, flight.to, e);
+      camera.position.lerpVectors(flight.camFrom, flight.camTo, e);
+      if (f >= 1) flight = null;
+    }
+    for (const k of Object.keys(pools)) pools[k].forEach((o) => (o.visible = false));
+    const used = { car: 0, scooter: 0, bus: 0, amb: 0, ped: 0 };
+    const ease = u * u * (3 - 2 * u);
+
+    // vehicles: glide from (pos - speed) to pos during the tick
+    for (const [sid, cars] of Object.entries(s.roads || {})) {
+      const road = G.layout.roads[sid];
+      for (const [pos, sym, speed] of cars) {
+        const kind = KIND[sym];
+        const v = take(kind, used[kind]++);
+        const from = G.point(road, Math.max(pos - speed, -2));
+        const to = G.point(road, pos);
+        v.position.set(from[0] + (to[0] - from[0]) * ease, 0.05, from[1] + (to[1] - from[1]) * ease);
+        v.rotation.y = HEADING[road.side];
+        v.userData.brake.visible = speed === 0;
+        if (v.userData.beacons) {
+          const on = Math.floor(time * 4) % 2 === 0;
+          v.userData.beacons[0].visible = on; v.userData.beacons[1].visible = !on;
+        }
+      }
+    }
+
+    // traffic lights, junction rings, pedestrians and labels
+    const decision = (s.decision && s.decision.junctions) || {};
+    for (const [jid, J] of Object.entries(G.junctions)) {
+      const [phase, yellow] = s.lights[jid];
+      J.glow.material.color.set(yellow ? 0xffc107 : PHASE_COLOR[phase]);
+      for (const axis of ['NS', 'EW']) {
+        const state = yellow ? 'amber' : phase === axis ? 'green' : 'red';
+        for (const [top, mid, low] of J.heads[axis]) {
+          top.material = state === 'red' ? M.red : M.off;
+          mid.material = state === 'amber' ? M.amber : M.off;
+          low.material = state === 'green' ? M.green : M.off;
+        }
+      }
+      const n = Math.min(s.peds[jid] || 0, 16);
+      const walking = phase === 'WALK' && !yellow;
+      for (let i = 0; i < n; i++) {
+        const p = take('ped', used.ped++);
+        const corner = i % 4, k = Math.floor(i / 4);
+        const cx = J.c0 + (corner === 1 || corner === 2 ? 2.45 : -0.45), cz = J.r0 + (corner >= 2 ? 2.45 : -0.45);
+        let x = cx + (corner === 1 || corner === 2 ? 1 : -1) * 0.2 * (k % 2), z = cz + (corner >= 2 ? 1 : -1) * 0.2 * Math.floor(k / 2);
+        if (walking) { // cross the street toward the next corner
+          const tx = J.c0 + (corner === 0 || corner === 1 ? 2.45 : -0.45), tz = J.r0 + (corner === 1 || corner === 2 ? 2.45 : -0.45);
+          x += (tx - cx) * ease; z += (tz - cz) * ease;
+        }
+        p.position.set(x, 0.12, z);
+        p.position.y = 0.12 + (walking ? Math.abs(Math.sin(time * 10 + i)) * 0.05 : 0);
+      }
+      animateOfficer(J, s, jid, u, time, decision[jid] || {});
+      // floating label: the officer's choice for this tick
+      const action = (s.actions || {})[jid];
+      const conf = decision[jid] && decision[jid].confidence;
+      const color = action === 'walk' ? PHASE_COLOR.WALK : action === 'north_south' ? PHASE_COLOR.NS : PHASE_COLOR.EW;
+      J.label.style.background = color;
+      const rule = decision[jid] && decision[jid].rule;
+      J.label.textContent = `${ACTION_ICON[action] || ''} ${action || ''}${conf != null ? ' · ' + conf.toFixed(2) : ''}${rule ? (rule.includes('ambulance') ? ' · 🚑 rule' : ' · rule') : ''}${(s.forced || []).includes(jid) ? ' · locked' : ''}`;
+      place(J.label, J.c0 + 1, J.bubble.visible ? 3.6 : 1.9, J.r0 + 1);
+    }
+
+    // cars waiting to enter the city
+    const outside = Object.entries(s.outside || {});
+    G.outLabels = G.outLabels || {};
+    for (const el of Object.values(G.outLabels)) el.style.display = 'none';
+    for (const [sid, n] of outside) {
+      const el = G.outLabels[sid] || (G.outLabels[sid] = Object.assign(document.createElement('div'), { className: 'label out' }));
+      if (!el.parentNode) labels.appendChild(el);
+      el.style.display = '';
+      el.textContent = `+${n} waiting`;
+      const [x, z] = G.point(G.layout.roads[sid], -1.5);
+      place(el, x, 0.8, z);
+    }
+
+    // weather
+    const wet = s.weather === 'rain';
+    rain.visible = wet;
+    if (wet) {
+      const a = rain.geometry.attributes.position;
+      for (let i = 0; i < a.count; i++) { let y = a.getY(i) - 0.25; if (y < 0) y += 14; a.setY(i, y); }
+      a.needsUpdate = true;
+    }
+    scene.background = new THREE.Color(wet ? 0x7b8794 : 0xbfe3ff);
+    scene.fog = new THREE.Fog(wet ? 0x7b8794 : 0xbfe3ff, wet ? 25 : 40, wet ? 95 : 140);
+    hemi.intensity = wet ? 0.55 : 0.75;
+    sun.intensity = wet ? 0.35 : 0.9;
+
+    controls.update();
+    renderer.render(scene, camera);
+    lastTime = time;
+    window.cityDebug = { officers: Object.keys(G.junctions).length,
+      bubbles: Object.values(G.junctions).filter((J) => J.bubble.visible).length };
+  }
+
+  const v3 = new THREE.Vector3();
+  function place(el, x, y, z) {
+    v3.set(x, y, z).project(camera);
+    const visible = v3.z < 1;
+    el.style.display = visible ? '' : 'none';
+    el.style.left = `${(v3.x * 0.5 + 0.5) * window.innerWidth}px`;
+    el.style.top = `${(-v3.y * 0.5 + 0.5) * window.innerHeight}px`;
+  }
+
+  function geometry(layout) {
+    // Same geometry as City.render() in city.py and viewer.html: every road cell is one square.
+    const L = layout.length;
+    const js = Object.values(layout.junctions);
+    const cols = Math.max(...js.map((j) => j.x)) + 1, rows = Math.max(...js.map((j) => j.y)) + 1;
+    const w = 2 * L + cols * 2 + (cols - 1) * L, h = 2 * L + rows * 2 + (rows - 1) * L;
+    const corner = (j) => [L + j.x * (L + 2), L + j.y * (L + 2)];
+    // Centre of cell p on a road (p = 0 at the far end, L - 1 at the stop line; p < 0 is inside the junction behind).
+    function point(road, p) {
+      const [c0, r0] = corner(layout.junctions[road.to]);
+      if (road.side === 'west') return [c0 - L + p + 0.5, r0 + 1.5];
+      if (road.side === 'east') return [c0 + 2 + L - 1 - p + 0.5, r0 + 0.5];
+      if (road.side === 'north') return [c0 + 0.5, r0 - L + p + 0.5];
+      return [c0 + 1.5, r0 + 2 + L - 1 - p + 0.5];
+    }
+    return { L, w, h, corner, point, layout };
+  }
+
+  return { build, draw, focus, overview };
+}
+
+function makeWindowTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, 32, 32);
+  g.fillStyle = '#9fb4c8'; g.fillRect(6, 8, 20, 14);
+  g.fillStyle = '#c9d8e6'; g.fillRect(6, 8, 20, 4);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+// ---------------------------------------------------------------- go
+if (!RUNS.length) {
+  ui.innerHTML = `<div class="empty"><div><h2>No runs yet</h2>
+    <p>Run <code>python level5-junction/run.py</code> first, then reload this page.</p></div></div>`;
+} else {
+  start();
+}
+</script>
+</body>
+</html>

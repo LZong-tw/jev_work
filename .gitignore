@@ -1,0 +1,17 @@
+node_modules/
+.env
+__pycache__/
+*.pyc
+.DS_Store
+
+# proxy secrets and runtime state
+proxy/keys.json
+proxy/usage.json
+proxy/*.log
+proxy/keys-handout.*
+
+# level 5 run history (each participant builds their own)
+workshop/level5-junction/runs/
+workshop/level5-junction/runs-solution-b/
+workshop/results/level5-memory/
+workshop/results/.exp-*.json

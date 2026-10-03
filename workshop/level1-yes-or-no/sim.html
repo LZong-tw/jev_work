@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Level 1 · Yes or No?</title>
+<link rel="stylesheet" href="/ui/ui.css">
+<link rel="stylesheet" href="/ui/game.css">
+<style>
+  .strip { position: relative; height: 92px; margin: 4px 0 14px; padding: 0 12px; }
+  .strip .axis { position: absolute; left: 12px; right: 12px; top: 46px; height: 2px; background: var(--line); }
+  .strip .side { position: absolute; top: 4px; font-size: 12px; font-weight: 700; }
+  .strip .zone { position: absolute; top: 18px; bottom: 26px; border-radius: 6px; transition: left .2s, width .2s; }
+  .strip .dot { position: absolute; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; border: 2px solid var(--bg);
+                font-size: 10px; font-weight: 700; color: #0b1220; display: grid; place-items: center; transition: left .6s ease; cursor: pointer; }
+  .strip .dot.wrong { box-shadow: 0 0 0 2px var(--red); }
+  .strip .th { position: absolute; top: 14px; bottom: 20px; width: 2px; margin-left: -1px; background: var(--ink); transition: left .2s; }
+  .strip .th span { position: absolute; top: -14px; left: 6px; font-size: 11px; white-space: nowrap; }
+  .strip .ticks { position: absolute; left: 12px; right: 12px; bottom: 0; display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; }
+  .summary { display: flex; gap: 22px; align-items: center; margin: 0 0 12px; flex-wrap: wrap; }
+  .codebox { margin-bottom: 12px; } .codebox > summary { cursor: pointer; font: 10px/1.8 var(--pixel); }
+  .codebox[open] > summary { margin-bottom: 8px; }
+  .summary .k { color: var(--muted); font-size: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .item .n { color: var(--muted); font-size: 12px; margin-right: 6px; }
+  .item .text { min-height: 42px; margin-bottom: 10px; }
+  .item .row { display: grid; grid-template-columns: 1fr 44px auto auto; gap: 8px; align-items: center; }
+  .item .p { font-variant-numeric: tabular-nums; text-align: right; }
+  .item .state { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>✅ Level 1 · Yes or No?</h1>
+  <div class="tabs" id="tabs"><button data-tab="reviews" class="on">Reviews</button><button data-tab="spam">Spam filter</button></div>
+  <span class="grow"></span>
+  <span id="sound"></span>
+  <span class="meter" id="meter"></span>
+</header>
+<div class="layout">
+  <main class="sim">
+    <div class="controls">
+      <label class="q">Question <input type="text" id="question" aria-label="The yes/no question"></label>
+      <label>Threshold <input type="range" id="threshold" min="0" max="1" step="0.01" aria-label="Threshold"> <b id="thVal"></b></label>
+      <button class="primary" id="runAll">▶ Ask Jev about all</button>
+    </div>
+    <div class="hint" id="source"></div>
+    <div class="card strip" id="strip" aria-label="Every answer on the line from 0 (NO) to 1 (YES)"></div>
+    <div class="summary hud" id="summary"></div>
+    <details class="card codebox" id="codeBox"><summary>✏️ Your code: <span id="codeName"></span></summary><div id="code"></div></details>
+    <div class="grid" id="cards"></div>
+  </main>
+  <aside class="editor" id="editor"></aside>
+</div>
+<script src="/ui/ui.js"></script>
+<script src="/ui/game.js"></script>
+<script>
+"use strict";
+const { el, $ } = UI;
+// what this page needs from Jev, per tab
+const EXPECT = {
+  reviews: { happy: { type: "noul", use: "the bar of each review: YES when it is at or above the threshold" } },
+  spam: { spam: { type: "noul", use: "the bar of each message: spam when it is at or above the threshold" } },
+};
+const WORDS = { reviews: { yes: "YES", no: "NO", item: "Review", missed: "happy ones called unhappy", alarms: "unhappy ones called happy" },
+                spam: { yes: "spam", no: "ok", item: "Message", missed: "spam that got through", alarms: "false alarms" } };
+const wantYes = (t, i) => ["yes", "spam"].includes(level[t].expected[i]);   // what the right answer is: YES (or spam)?
+// good news is green: a happy review (YES), a normal message (ok)
+const GOOD = { reviews: "yes", spam: "no" };
+const tone = (t, lab) => lab === GOOD[t] ? "yes" : "no";           // the .tag class: yes = green, no = red
+const color = (t, lab) => lab === GOOD[t] ? "var(--green)" : "var(--red)";
+let level, tab = "reviews", editor, opened = null;
+const tabs = {};   // per tab: { question, threshold, runs: [{ p, status, error, response, request }] }
+
+const requestFor = (t, i) => ({ state: level[t].items[i], questions: { [level[t].id]: tabs[t].question } });
+const labelOf = (t, p) => p >= tabs[t].threshold ? "yes" : "no";
+const tint = (t, lab) => lab === GOOD[t] ? "rgba(47,210,122,.08)" : "rgba(255,77,85,.08)";
+
+function render() {
+  const t = tabs[tab], L = level[tab], W = WORDS[tab];
+  $("#question").value = t.question.instructions;
+  $("#threshold").value = t.threshold; $("#thVal").textContent = t.threshold.toFixed(2);
+  $("#source").textContent = `From ${L.file}: ${L.items.length} items, QUESTION and THRESHOLD. Edit the file and reload, or try things here. Click a card to open its JSON in the Jev editor.`;
+  // the line from 0 to 1: every answer is a dot, the threshold splits NO from YES
+  const left = p => `calc(12px + (100% - 24px) * ${p})`;
+  $("#strip").replaceChildren(
+    el("div", { class: "zone", style: `left:${left(0)};width:calc((100% - 24px) * ${t.threshold});background:${tint(tab, "no")}` }),
+    el("div", { class: "zone", style: `left:${left(t.threshold)};width:calc((100% - 24px) * ${1 - t.threshold});background:${tint(tab, "yes")}` }),
+    el("span", { class: `side ${GOOD[tab] === "no" ? "ok" : "bad"}`, style: `left:${left(0)}` }, `← ${W.no}`),
+    el("span", { class: `side ${GOOD[tab] === "yes" ? "ok" : "bad"}`, style: `right:12px` }, `${W.yes} →`),
+    el("div", { class: "axis" }),
+    el("div", { class: "th", style: `left:${left(t.threshold)}` }, el("span", {}, `threshold ${t.threshold.toFixed(2)}`)),
+    ...t.runs.map((r, i) => [r, i]).filter(([r]) => r.p !== undefined).map(([r, i]) => el("div", {
+      class: `dot${L.expected && (labelOf(tab, r.p) === "yes") !== wantYes(tab, i) ? " wrong" : ""}`,
+      style: `left:${left(r.p)};top:${22 + (i % 3) * 14}px;background:${L.expected ? color(tab, wantYes(tab, i) ? "yes" : "no") : color(tab, labelOf(tab, r.p))}`,
+      title: `${i + 1}. p=${r.p.toFixed(2)} · ${L.items[i]}`, onclick: () => openEditor(i) }, i + 1)),
+    el("div", { class: "ticks" }, ...[0, 0.25, 0.5, 0.75, 1].map(x => el("span", {}, x))));
+  // the game bar
+  const done = t.runs.map((r, i) => [r, i]).filter(([r]) => r.p !== undefined);
+  const yes = done.filter(([r]) => labelOf(tab, r.p) === "yes").length;
+  const parts = [el("div", {}, el("div", { class: "k" }, "answered"), el("div", { class: "big" }, `${done.length}/${L.items.length}`)),
+                 el("div", {}, el("div", { class: "k" }, W.yes), el("div", { class: `big ${tone(tab, "yes") === "yes" ? "ok" : "bad"}` }, yes)),
+                 el("div", {}, el("div", { class: "k" }, W.no), el("div", { class: `big ${tone(tab, "no") === "yes" ? "ok" : "bad"}` }, done.length - yes))];
+  if (L.expected) {
+    const right = done.filter(([r, i]) => (labelOf(tab, r.p) === "yes") === wantYes(tab, i)).length;
+    const missed = done.filter(([r, i]) => wantYes(tab, i) && labelOf(tab, r.p) === "no").length;
+    const alarms = done.filter(([r, i]) => !wantYes(tab, i) && labelOf(tab, r.p) === "yes").length;
+    const ring = el("div");
+    UI.ScoreRing(ring, { key: `level1-${tab}`, label: tab === "spam" ? "your spam filter" : "your question" }).show(right, L.items.length);
+    parts.unshift(ring, el("div", {}, el("div", { class: "k" }, "lives"), GAME.hearts(Math.max(0, 3 - missed - alarms), 3)),
+                  el("div", {}, el("div", { class: "k" }, "stars"), GAME.stars(right / L.items.length)));
+    parts.push(el("div", {}, el("div", { class: "k" }, W.missed), el("div", { class: `big ${missed ? "bad" : ""}` }, missed)),
+               el("div", {}, el("div", { class: "k" }, W.alarms), el("div", { class: `big ${alarms ? "warn" : ""}` }, alarms)));
+  }
+  $("#summary").replaceChildren(...parts);
+  // the cards
+  $("#cards").replaceChildren(...L.items.map((text, i) => {
+    const r = t.runs[i], has = r.p !== undefined, lab = has ? labelOf(tab, r.p) : null;
+    const exp = L.expected ? L.expected[i] : null, right = has && exp ? (lab === "yes") === wantYes(tab, i) : null;
+    return el("div", { class: `card item clickable${r.status === "asking" ? " asking" : ""}${opened && opened.tab === tab && opened.i === i ? " sel" : ""}`,
+                       onclick: () => openEditor(i) },
+      el("div", { class: "text" }, el("span", { class: "n" }, `${i + 1}.`), text),
+      el("div", { class: "row" },
+        UI.pbar(has ? r.p : 0, t.threshold, has ? color(tab, lab) : undefined),
+        el("span", { class: "p" }, has ? r.p.toFixed(2) : "–"),
+        has ? el("span", { class: `tag ${tone(tab, lab)}` }, W[lab]) : el("span", { class: "state" }, r.status === "asking" ? "asking Jev…" : r.error ? "" : "not asked"),
+        exp ? el("span", { class: "hint", title: `expected: ${exp}` }, has ? (right ? "✓" : `✗ (${exp})`) : `expect ${exp}`) : null),
+      r.error ? el("div", { class: "err", style: "margin-top:6px;font-size:12px" }, r.error) : null);
+  }));
+}
+
+function setResult(t, i, result, request) {
+  const r = tabs[t].runs[i];
+  Object.assign(r, { p: result.answers[level[t].id].noul, status: "done", error: null, response: result, request });
+  if (opened && opened.tab === t && opened.i === i) editor.showResponse(opened.o, result);
+  if (t !== tab) return;
+  render();
+  const card = document.querySelector(`#cards > .item:nth-child(${i + 1})`), exp = level[t].expected;
+  if (!exp) { GAME.sfx("blip"); GAME.pop(card, r.p.toFixed(2), labelOf(t, r.p) === GOOD[t] ? "#2fd27a" : "#ff4d55"); return; }
+  const right = (labelOf(t, r.p) === "yes") === wantYes(t, i);
+  GAME.sfx(right ? "coin" : "hit"); GAME.pop(card, right ? "+1" : "✗", right ? "#ffcd38" : "#ff4d55");
+  if (right) GAME.burst(card, 3); else GAME.shake(card);
+}
+function finale(t) {   // the end of a run: full marks is a party
+  const exp = level[t].expected;
+  if (!exp || t !== tab) return;
+  const right = tabs[t].runs.filter((r, i) => r.p !== undefined && (labelOf(t, r.p) === "yes") === wantYes(t, i)).length;
+  if (right === exp.length) { GAME.sfx("win"); GAME.banner(`PERFECT! ${right}/${exp.length}`); }
+  else if (right <= exp.length / 2) GAME.sfx("lose");
+}
+function openEditor(i) {
+  const t = tab, r = tabs[t].runs[i];
+  const o = { title: `${WORDS[t].item} ${i + 1}`, request: r.request || requestFor(t, i), response: r.response,
+              onResult: (result, request) => setResult(t, i, result, request) };
+  opened = { tab: t, i, o };
+  editor.open(o); render();
+}
+async function runAll() {
+  const t = tab, btn = $("#runAll");
+  btn.disabled = true;
+  for (let i = 0; i < level[t].items.length; i++) {   // imperative-ok: one call after another, in order
+    const r = tabs[t].runs[i], request = requestFor(t, i);
+    r.status = "asking"; r.error = null; if (t === tab) render();
+    try {
+      const result = await UI.ask(request);
+      const bad = UI.checkResponse(result, request, EXPECT[t]);
+      if (bad.length) throw new Error(bad.join(" "));
+      setResult(t, i, result, request);
+    } catch (e) { Object.assign(r, { status: "error", error: e.message }); if (t === tab) render(); }
+    await UI.sleep(120);
+  }
+  btn.disabled = false;
+  finale(t);
+}
+let code = {};
+function showCode(t) {
+  const file = level[t].file;
+  $("#codeName").textContent = file;
+  $("#codeBox").open = /TODO/.test(code[file] || "");
+  UI.CodePanel($("#code"), { file, source: code[file] || "", onSaved: async source => {
+    code[file] = source;
+    const fresh = (await UI.api("/api/level"))[t];       // your new QUESTION and THRESHOLD
+    level[t] = fresh;
+    tabs[t].question = { ...fresh.question }; tabs[t].threshold = fresh.threshold;
+    if (t === tab) render();
+  } });
+}
+function showTab(t) {
+  tab = t; opened = null;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  editor = UI.Editor($("#editor"), EXPECT[t]);
+  showCode(t);
+  render();
+}
+
+(async () => {
+  try { level = await UI.boot(); } catch (e) { document.body.prepend(el("div", { class: "err", style: "padding:12px" }, e.message)); return; }
+  $("#sound").replaceChildren(GAME.soundButton());
+  code = await UI.api("/api/code", {});
+  ["reviews", "spam"].forEach(t => {
+    tabs[t] = { question: { ...level[t].question }, threshold: level[t].threshold, runs: level[t].items.map(() => ({ status: "idle" })) };
+  });
+  document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  $("#question").oninput = e => { tabs[tab].question = { ...tabs[tab].question, instructions: e.target.value }; };
+  $("#threshold").oninput = e => { tabs[tab].threshold = +e.target.value; render(); };
+  $("#runAll").onclick = runAll;
+  showTab("reviews");
+})();
+</script>
+</body>
+</html>

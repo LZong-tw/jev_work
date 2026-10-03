@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="288" viewBox="0 0 720 288" role="img" aria-label="Level 5: score over one stream"><title>Level 5: score over one stream</title><style>
+  .t { fill: #0b0b0b; font: 13px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .m { fill: #52514e; font: 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .w { fill: #ffffff; font: 600 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .grid { stroke: #e4e2dc; stroke-width: 1; }
+  .ref { stroke: #52514e; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .s1 { fill: #2a78d6; } .s1l { stroke: #2a78d6; } .s2 { fill: #eb6834; }
+  .mean { stroke: #0b0b0b; stroke-width: 2.5; }
+  @media (prefers-color-scheme: dark) {
+    .t { fill: #ffffff; } .m { fill: #c3c2b7; } .grid { stroke: #3a3936; } .ref { stroke: #c3c2b7; }
+    .s1 { fill: #3987e5; } .s1l { stroke: #3987e5; } .s2 { fill: #d95926; } .mean { stroke: #ffffff; }
+  }
+</style><line class="grid" x1="553.6" x2="553.6" y1="26" y2="264"/><text class="m" x="553.6" y="280" text-anchor="middle">0</text><text class="m" x="230" y="16">total score after 200 ticks, exam traffic (seed 2026)</text><line class="ref" x1="621.0" x2="621.0" y1="26" y2="264"/><text class="m" x="617.0" y="262" text-anchor="end">simple rules 165.3</text><text class="t" x="220" y="47" text-anchor="end">fixed timer (no AI)</text><rect class="s1" x="424.0" y="32" width="129.6" height="22" rx="4"/><text class="t" x="559.6" y="47" style="font-weight:600">-317.6</text><text class="t" x="220" y="85" text-anchor="end">simple rules (no AI)</text><rect class="s1" x="553.6" y="70" width="67.5" height="22" rx="4"/><text class="t" x="627.0" y="85" style="font-weight:600">165.3</text><text class="t" x="220" y="123" text-anchor="end">Jev, current tick only</text><rect class="s1" x="259.0" y="108" width="294.6" height="22" rx="4"/><text class="t" x="559.6" y="123" style="font-weight:600">-721.9</text><text class="t" x="220" y="161" text-anchor="end">Jev, full history (starter)</text><rect class="s1" x="369.8" y="146" width="183.7" height="22" rx="4"/><text class="t" x="559.6" y="161" style="font-weight:600">-450.2</text><text class="t" x="220" y="199" text-anchor="end">A: history + coach lessons</text><rect class="s1" x="490.7" y="184" width="62.9" height="22" rx="4"/><text class="t" x="559.6" y="199" style="font-weight:600">-154.1</text><text class="t" x="220" y="237" text-anchor="end">B: last 20 ticks + lessons</text><rect class="s1" x="524.6" y="222" width="29.0" height="22" rx="4"/><text class="t" x="559.6" y="237" style="font-weight:600">-71.0</text></svg>

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Level 4 · Run the tea shop</title>
+<link rel="stylesheet" href="/ui/ui.css">
+<link rel="stylesheet" href="/ui/game.css">
+<style>
+  .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+  @media (max-width: 1250px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .tile .k { color: var(--muted); font-size: 12px; } .tile .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; margin-bottom: 12px; }
+  @media (max-width: 1250px) { .two { grid-template-columns: 1fr; } }
+  .card h3 { margin: 0 0 10px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .queue { display: flex; flex-wrap: wrap; gap: 6px; min-height: 64px; align-content: flex-start; padding: 8px; border-radius: 10px; background: #0b1016; margin-bottom: 12px; }
+  .cust { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; transition: background .3s; }
+  .cust.new { animation: walkin .5s ease; }
+  @keyframes walkin { from { transform: translateX(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .stock { display: grid; grid-template-columns: 70px 1fr 56px; gap: 8px 10px; align-items: center; }
+  .events { display: flex; gap: 6px; flex-wrap: wrap; min-height: 26px; margin-top: 10px; }
+  .chip { border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 600; background: var(--panel2); animation: pop .4s ease; }
+  @keyframes pop { from { transform: scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
+  .fsm svg { width: 100%; height: 230px; display: block; }
+  .fsm .node rect { fill: #121920; stroke: var(--line); stroke-width: 1.5; transition: all .3s; }
+  .fsm .node.on rect { fill: #1d2c3f; stroke: var(--accent); stroke-width: 2.5; }
+  .fsm .node text { fill: var(--ink); font: 700 13px system-ui; }
+  .fsm .edge { stroke: #3b4856; stroke-width: 1.5; fill: none; }
+  .fsm .edge.hot { stroke: var(--amber); stroke-width: 3; }
+  .fsm .lab { fill: var(--muted); font: 11px system-ui; }
+  .choice-big { font-size: 22px; font-weight: 800; }
+  .probs { display: grid; grid-template-columns: 110px 1fr 40px; gap: 6px 10px; align-items: center; font-size: 13px; margin-top: 8px; }
+  .you { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .you button { text-align: left; } .you button small { display: block; color: var(--muted); font-size: 11px; }
+  .chart svg { width: 100%; height: 150px; display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  .codebox { margin-top: 12px; } .codebox > summary { cursor: pointer; font: 10px/1.8 var(--pixel); } .codebox[open] > summary { margin-bottom: 8px; }
+  .cust { background: transparent !important; }
+  pre.reads { white-space: pre-wrap; font-size: 12px; color: #c8d4e0; background: #0b1016; border-radius: 8px; padding: 8px; margin: 8px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧋 Level 4 · Run the tea shop</h1>
+  <span class="grow"></span>
+  <span id="sound"></span>
+  <span class="meter" id="meter"></span>
+</header>
+<div class="layout">
+  <main class="sim">
+    <div class="controls">
+      <label>Manager <select id="manager" aria-label="Manager"><option value="jev">Jev</option><option value="rules">simple rules</option><option value="you">you</option></select></label>
+      <label>Seed <input type="number" id="seed" value="1" min="0" style="width:70px" aria-label="Seed"></label>
+      <button id="newDay">New day</button>
+      <button class="primary" id="next">Next round ▶</button>
+      <button id="play">▶ Play the day</button>
+      <label>one round every <select id="speed" aria-label="Speed"><option value="2000">2 s</option><option value="1000" selected>1 s</option><option value="500">0.5 s</option></select></label>
+    </div>
+    <div class="hint" id="source" style="margin-bottom:10px"></div>
+    <div class="hud" id="hud4"></div>
+    <div class="tiles" id="tiles"></div>
+    <div class="two">
+      <div class="card"><h3>The shop</h3><div class="queue" id="queue"></div><div class="stock" id="stock"></div><div class="events" id="events"></div></div>
+      <div class="card fsm"><h3>The state machine (code moves it, before every decision)</h3><div id="fsm"></div></div>
+    </div>
+    <div class="two">
+      <div class="card"><h3 id="decTitle">This round</h3><div id="decision"></div></div>
+      <div class="card chart"><h3>Points per round (bars) and in total (line)</h3><div id="chart"></div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px"><h3>The day so far</h3><table id="log"></table></div>
+    <details class="card codebox" id="codeBox" style="margin-bottom:12px"><summary>✏️ Your code: shop.py (describe(), QUESTIONS, the rules)</summary><div id="code"></div></details>
+    <div class="card"><h3>Days played: who manages best?</h3><table id="days"></table></div>
+  </main>
+  <aside class="editor" id="editor"></aside>
+</div>
+<script src="/ui/ui.js"></script>
+<script src="/ui/game.js"></script>
+<script>
+"use strict";
+const { el, $ } = UI;
+const NS = "http://www.w3.org/2000/svg";
+const svg = (tag, attrs = {}, ...kids) => { const e = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v)); kids.forEach(k => e.append(k)); return e; };
+const WEATHER = { sunny: "☀️ sunny", hot: "🔥 hot", rainy: "🌧️ rainy" };
+let level, EXPECT, editor, day = null, busy = false, playing = false;
+const days = [];
+
+// ----- the day ----------------------------------------------------------------------------------------
+// day = { seed, manager, view, decision, arrived, transition, pending: { answers, action, response, how }, log: [], last }
+async function newDay() {
+  stop();
+  const seed = +$("#seed").value || 0, r = await UI.api("/api/new", { seed });
+  day = { seed, manager: $("#manager").value, view: r.view, decision: r.decision, arrived: r.arrived, transition: r.transition,
+          pending: {}, log: [], last: null, newCustomers: r.arrived, best: r.best };
+  openRound(); render(); GAME.sfx("blip");
+}
+// how good the day is: your points out of the best any plan can get on this seed (best_possible.py)
+const dayScore = (points, best) => best === null || best === undefined ? null : best > 0 ? Math.max(0, Math.min(1, points / best)) : points >= best ? 1 : 0;
+function renderHud() {
+  const v = day.view, f = dayScore(v.points, day.best), ring = el("div");
+  const sr = UI.ScoreRing(ring, { key: `level4-seed${day.seed}-${day.manager}`, label: `${day.manager} · seed ${day.seed}` });
+  if (f === null) sr.clear("the planner does not know your rules"); else sr.show(Math.max(0, v.points), Math.max(1, day.best), { text: `${v.points} / ${day.best}`, note: v.done ? undefined : "points / the best possible day", record: v.done });
+  $("#hud4").replaceChildren(ring, el("div", { class: "item" }, el("span", { class: "lbl" }, "stars"), GAME.stars(v.done && f !== null ? f : 0)),
+    el("div", { class: "item" }, el("span", { class: "lbl" }, "coins"), GAME.sprite("coin", 3), el("span", { class: "val" }, `${2 * v.served}`)),
+    el("div", { class: "item" }, el("span", { class: "lbl" }, "angry"), GAME.sprite("angry", 3), el("span", { class: "val" }, `${v.angry}`)),
+    el("div", { class: "item" }, el("span", { class: "lbl" }, "round"), el("span", { class: "val" }, `${Math.min(v.round + 1, v.rounds)}/${v.rounds}`)));
+}
+function openRound() {
+  if (!day.decision) return;
+  const o = { title: `Round ${day.view.round + 1} · ${day.view.clock}`, request: day.decision, response: day.pending.response,
+              onResult: (res, req, how) => { day.pending = { answers: res.answers, action: res.answers.action.choice, response: res, how }; render(); } };
+  day.editorOpen = o; editor.open(o);
+}
+async function decide() {   // the manager's action for this round (Jev: one call with describe() + QUESTIONS)
+  if (day.pending.action) return day.pending.action;
+  const manager = $("#manager").value;
+  if (manager === "rules") { day.pending = { action: (await UI.api("/api/rules", {})).action, how: "rules" }; return day.pending.action; }
+  if (manager === "you") return null;
+  const res = await UI.ask(day.decision);
+  const bad = UI.checkResponse(res, day.decision, EXPECT);
+  if (bad.length) throw new Error(bad.join(" "));
+  day.pending = { answers: res.answers, action: res.answers.action.choice, response: res, how: "jev" };
+  editor.showResponse(day.editorOpen, res);
+  return day.pending.action;
+}
+async function play(action) {   // apply the action: the round is played, the next one starts
+  const before = day.view, pending = day.pending;
+  const r = await UI.api("/api/step", { action });
+  day.log.push({ before, action, how: pending.how || $("#manager").value, conf: pending.answers ? pending.answers.action.confidence : null,
+                 pearlsSoon: pending.answers && pending.answers.pearls_soon_empty ? pending.answers.pearls_soon_empty.noul : null, ...r.result,
+                 transition: r.transition || null, total: r.view.points });
+  day.last = { ...r.result, arrived: r.arrived || 0, transition: r.transition || null };
+  Object.assign(day, { view: r.view, decision: r.decision, pending: {}, newCustomers: r.arrived || 0, transition: r.transition || null });
+  if (r.view.done) { days.unshift({ manager: day.manager, seed: day.seed, points: r.view.points, served: r.view.served, angry: r.view.angry }); stop(); }
+  else openRound();
+  render();
+  // the round, as a game: coins for drinks, a hit for every angry customer, a blip when the mode changes
+  const L = day.last;
+  if (L.served) { GAME.sfx(L.served >= 4 ? "cash" : "coin"); GAME.pop($("#queue"), `+${2 * L.served}`, "#ffcd38"); GAME.burst($("#queue"), Math.min(6, L.served)); }
+  if (L.left) setTimeout(() => { GAME.sfx("hit"); GAME.pop($("#tiles"), `−${3 * L.left}`, "#ff4d55"); GAME.shake($("#queue")); }, 250);
+  if (L.transition) setTimeout(() => { GAME.sfx("blip"); GAME.pop($("#fsm"), L.transition.split(" -> ")[1] + "!", "#6ad8ff"); }, 400);
+  if (!L.served && !L.left && !L.transition) GAME.sfx("tick");
+  if (r.view.done) {
+    const f = dayScore(r.view.points, day.best);
+    setTimeout(() => {
+      if (f !== null && f >= 0.9) { GAME.sfx("win"); GAME.banner(`MASTER! ${r.view.points}/${day.best}`); }
+      else if (r.view.points > 0) { GAME.sfx("cash"); GAME.banner(`DAY OVER: ${r.view.points} points`); }
+      else { GAME.sfx("lose"); GAME.banner(`OH NO: ${r.view.points} points`); }
+    }, 500);
+  }
+}
+async function nextRound() {
+  if (!day || day.view.done || busy) return;
+  busy = true; $("#next").disabled = true;
+  try {
+    const action = await decide();
+    render();
+    if (action) { if (playing) await UI.sleep(+$("#speed").value / 2); await play(action); }
+  } catch (e) { stop(); showError(e.message); }
+  finally { busy = false; $("#next").disabled = false; }
+}
+async function loop() {
+  while (playing && day && !day.view.done) {   // imperative-ok: one round after another, at the chosen pace
+    await nextRound();
+    if ($("#manager").value === "you") { stop(); break; }
+    await UI.sleep(+$("#speed").value / 2);
+  }
+}
+function stop() { playing = false; $("#play").textContent = "▶ Play the day"; }
+function showError(msg) { $("#events").replaceChildren(el("span", { class: "chip err" }, msg)); }
+
+// ----- drawing ----------------------------------------------------------------------------------------
+function render() {
+  if (!day) return;
+  const v = day.view;
+  $("#source").textContent = `From shop.py: the Shop rules, ACTIONS, QUESTIONS and rules_policy. Edit it, then "New day". Seed ${day.seed}, manager: ${day.manager}.`;
+  const tile = (k, val, cls) => el("div", { class: "card tile" }, el("div", { class: "k" }, k), el("div", { class: `v ${cls || ""}` }, val));
+  $("#tiles").replaceChildren(tile("time", v.done ? "closed" : v.clock), tile("round", `${Math.min(v.round + 1, v.rounds)} / ${v.rounds}`), tile("weather", WEATHER[v.weather] || v.weather),
+    tile("points", v.points, v.points < 0 ? "bad" : "ok"), tile("served", v.served), tile("left angry", v.angry, v.angry ? "bad" : ""));
+  // the queue: one face per customer, its colour = how long it has waited
+  const faces = v.queue.map((w, i) => el("div", { class: `cust${i >= v.queue.length - day.newCustomers ? " new" : ""}`, title: `waited ${w} round${w === 1 ? "" : "s"}` },
+                                         GAME.sprite(w >= v.max_wait ? "angry" : w ? "meh" : "happy", 3)));
+  $("#queue").replaceChildren(...(faces.length ? faces : [el("span", { class: "hint" }, "nobody waiting")]));
+  const stockRow = (k, x, max, low) => [el("span", {}, k), UI.pbar(x / max, undefined, x <= low ? "var(--red)" : "var(--blue)"), el("span", { class: x <= low ? "bad" : "" }, `${x}/${max}`)];
+  $("#stock").replaceChildren(...stockRow("🟤 pearls", v.pearls, v.cap, 4), ...stockRow("🍵 tea", v.tea, v.cap, 4), ...stockRow("⚡ energy", v.energy, 10, 2));
+  const L = day.last;
+  $("#events").replaceChildren(...(L ? [
+    L.served ? el("span", { class: "chip ok" }, `served ${L.served} · +${2 * L.served}`) : null,
+    L.left ? el("span", { class: "chip bad" }, `${L.left} left angry · −${3 * L.left}`) : null,
+    L.arrived ? el("span", { class: "chip" }, `+${L.arrived} walked in`) : null,
+    L.transition ? el("span", { class: "chip warn" }, L.transition.replace("->", "→")) : null,
+  ].filter(Boolean) : [el("span", { class: "chip" }, `the day starts: ${day.arrived} customers walked in`)]));
+  renderFsm(v.mode, day.transition);
+  renderHud();
+  renderDecision();
+  renderChart();
+  renderLog();
+}
+function renderFsm(mode, transition) {
+  // OPEN in the middle, no arrows cross; a move the picture has no arrow for is drawn dashed when it happens
+  const P = { TIRED: [52, 112], OPEN: [210, 112], RUSH: [368, 112], SOLD_OUT: [210, 214] };
+  const [from, to] = transition ? transition.split(" -> ") : [];
+  const EDGES = [["OPEN", "RUSH", [0, -26], "queue ≥ 8"], ["RUSH", "OPEN", [0, 26], "queue < 8"],
+                 ["OPEN", "TIRED", [0, -26], "energy ≤ 2"], ["TIRED", "OPEN", [0, 26], "rested"],
+                 ["RUSH", "TIRED", [0, -150], "energy ≤ 2"], ["OPEN", "SOLD_OUT", [-22, 0], ""], ["SOLD_OUT", "OPEN", [22, 0], ""],
+                 ["RUSH", "SOLD_OUT", [10, 18], "pearls or tea = 0"], ["TIRED", "SOLD_OUT", [-10, 18], "pearls or tea = 0"]];
+  // where a line towards (tx, ty) leaves a node's box: arrows start and end at the box, not under it
+  const rim = ([x, y], [tx, ty]) => { const dx = tx - x, dy = ty - y, k = Math.min(47 / (Math.abs(dx) || 1e-9), 20 / (Math.abs(dy) || 1e-9)); return [x + dx * k, y + dy * k]; };
+  const edge = (a, b, bend, label, dashed) => {
+    const [x1, y1] = P[a], [x2, y2] = P[b], mx = (x1 + x2) / 2 + bend[0], my = (y1 + y2) / 2 + bend[1];
+    const hot = a === from && b === to, ly = (y1 + y2) / 2 + bend[1] / 2, s0 = rim(P[a], [mx, my]), s1 = rim(P[b], [mx, my]);
+    return [svg("path", { class: `edge${hot ? " hot" : ""}`, d: `M${s0[0]},${s0[1]} Q${mx},${my} ${s1[0]},${s1[1]}`, "marker-end": `url(#${hot ? "ah" : "a"})`,
+                          ...(dashed ? { "stroke-dasharray": "5 4" } : {}) }),
+            label ? svg("text", { class: "lab", x: (x1 + x2) / 2 + bend[0] / 2, y: ly + (bend[1] < 0 ? -9 : bend[1] > 0 ? 17 : 4), "text-anchor": "middle" }, label) : null].filter(Boolean);
+  };
+  const known = EDGES.some(([a, b]) => a === from && b === to);
+  const node = name => { const [x, y] = P[name]; return svg("g", { class: `node${name === mode ? " on" : ""}` },
+    svg("rect", { x: x - 45, y: y - 17, width: 90, height: 34, rx: 10 }), svg("text", { x, y: y + 5, "text-anchor": "middle" }, name)); };
+  const marker = (id, color) => svg("marker", { id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" }, svg("path", { d: "M0,0 L10,5 L0,10 z", fill: color }));
+  $("#fsm").replaceChildren(svg("svg", { viewBox: "0 0 420 245" }, svg("defs", {}, marker("a", "#3b4856"), marker("ah", "#ffb020")),
+    ...EDGES.flatMap(([a, b, bend, label]) => edge(a, b, bend, label)),
+    ...(from && to && P[from] && P[to] && !known ? edge(from, to, [0, 40], "", true) : []),
+    ...Object.keys(P).map(node)));
+}
+function renderDecision() {
+  const v = day.view, p = day.pending, manager = $("#manager").value;
+  $("#decTitle").textContent = v.done ? `End of day: ${v.points} points` : `Round ${v.round + 1} · ${v.clock} · the manager decides`;
+  if (v.done) {
+    $("#decision").replaceChildren(el("div", { class: "big" }, `${v.points} points`), el("div", { class: "hint" }, `Served ${v.served} drinks, ${v.angry} customers left angry. Try the other managers on seed ${day.seed}.`));
+    return;
+  }
+  const reads = el("details", {}, el("summary", { class: "hint" }, "What Jev reads (describe())"), el("pre", { class: "reads" }, day.decision.state));
+  const parts = [];
+  if (p.action) {
+    parts.push(el("div", { class: "choice-big" }, p.action), el("div", { class: "hint" }, level.actions[p.action] || ""));
+    if (p.answers) {
+      const a = p.answers.action;
+      parts.push(el("div", { class: "hint", style: "margin-top:6px" }, `${p.how === "apply" ? "your answer" : "Jev"} · confidence ${(a.confidence ?? 0).toFixed(2)}${p.answers.pearls_soon_empty ? ` · pearls run out soon? ${p.answers.pearls_soon_empty.noul.toFixed(2)}` : ""}`),
+        el("div", { class: "probs" }, ...Object.entries(a.probabilities || { [a.choice]: a.confidence ?? 1 }).sort((x, y) => y[1] - x[1])
+          .flatMap(([k, q]) => [el("span", {}, k), UI.pbar(q, undefined, k === a.choice ? "var(--green)" : undefined), el("span", {}, q.toFixed(2))])));
+    } else parts.push(el("div", { class: "hint" }, "the simple rules chose this"));
+    parts.push(el("div", { class: "hint", style: "margin-top:6px" }, "Next round ▶ plays it."));
+  } else if (manager === "you") {
+    parts.push(el("div", { class: "hint" }, "You are the manager: pick the action for this round."),
+      el("div", { class: "you" }, ...Object.entries(level.actions).map(([k, d]) => el("button", { onclick: () => youPick(k) }, k, el("small", {}, d)))));
+  } else parts.push(el("div", { class: "hint" }, busy ? (manager === "jev" ? "Jev is deciding…" : "…") : `Next round ▶ asks ${manager === "jev" ? "Jev (one call)" : "the simple rules"}.`));
+  $("#decision").replaceChildren(...parts, reads);
+}
+async function youPick(action) {
+  if (busy) return;
+  busy = true;
+  try { day.pending = { action, how: "you" }; await play(action); } catch (e) { showError(e.message); } finally { busy = false; }
+}
+function renderChart() {
+  const rows = day.log, W = 420, H = 150, n = day.view.rounds, bw = (W - 40) / n;
+  const max = Math.max(10, ...rows.map(r => Math.abs(r.gained))), totals = rows.map(r => r.total), tmax = Math.max(10, ...totals.map(Math.abs));
+  const y0 = H / 2, Y = g => y0 - g / max * (H / 2 - 12), T = t => y0 - t / tmax * (H / 2 - 12);
+  const line = totals.map((t, i) => `${i ? "L" : "M"}${40 + i * bw + bw / 2},${T(t)}`).join("");
+  $("#chart").replaceChildren(svg("svg", { viewBox: `0 0 ${W} ${H}` },
+    svg("line", { x1: 40, x2: W, y1: y0, y2: y0, stroke: "#28323d" }),
+    svg("text", { x: 34, y: 12, "text-anchor": "end", fill: "#8d9aa8", "font-size": 10 }, `+${max}`),
+    svg("text", { x: 34, y: H - 4, "text-anchor": "end", fill: "#8d9aa8", "font-size": 10 }, `−${max}`),
+    ...rows.map((r, i) => svg("rect", { x: 40 + i * bw + 2, width: bw - 4, y: Math.min(Y(r.gained), y0), height: Math.max(1, Math.abs(Y(r.gained) - y0)), rx: 2,
+                                        fill: r.gained >= 0 ? "#2fd27a" : "#ff4d55", opacity: .75 }, svg("title", {}, `${r.before.clock}: ${r.gained >= 0 ? "+" : ""}${r.gained}`))),
+    rows.length ? svg("path", { d: line, fill: "none", stroke: "#6aa9ff", "stroke-width": 2.5 }) : svg("text", { x: W / 2, y: y0 - 6, "text-anchor": "middle", fill: "#8d9aa8", "font-size": 12 }, "no rounds yet")));
+}
+function renderLog() {
+  const head = el("tr", {}, ...["time", "mode", "queue", "pearls", "tea", "energy", "action", "by", "points", "note"].map(h => el("th", {}, h)));
+  $("#log").replaceChildren(head, ...day.log.slice().reverse().map(r => el("tr", {},
+    el("td", {}, r.before.clock), el("td", {}, r.before.mode), el("td", {}, r.before.queue.length), el("td", {}, r.before.pearls), el("td", {}, r.before.tea),
+    el("td", {}, r.before.energy), el("td", {}, r.action), el("td", { class: "hint" }, r.how + (r.conf !== null ? ` ${r.conf.toFixed(2)}` : "")),
+    el("td", { class: r.gained < 0 ? "bad" : r.gained > 0 ? "ok" : "" }, `${r.gained >= 0 ? "+" : ""}${r.gained}`),
+    el("td", { class: "hint" }, [r.left ? `${r.left} left angry` : "", r.transition ? r.transition.replace("->", "→") : "", r.pearlsSoon > 0.6 ? "pearls running low?" : ""].filter(Boolean).join(", ")))));
+  $("#days").replaceChildren(el("tr", {}, ...["manager", "seed", "points", "served", "angry"].map(h => el("th", {}, h))),
+    ...(days.length ? days.map(d => el("tr", {}, el("td", {}, d.manager), el("td", {}, d.seed), el("td", { class: d.points < 0 ? "bad" : "ok" }, d.points), el("td", {}, d.served), el("td", {}, d.angry)))
+                    : [el("tr", {}, el("td", { colspan: 5, class: "hint" }, "Finish a day to see its score here. Same seed = same customers: compare Jev, the rules and you."))]));
+}
+
+(async () => {
+  try { level = await UI.boot(); } catch (e) { document.body.prepend(el("div", { class: "err", style: "padding:12px" }, e.message)); return; }
+  EXPECT = {
+    action: { type: "choice", use: "the action played this round", labels: Object.keys(level.actions) },
+    pearls_soon_empty: { type: "noul", use: "a hint in the log (pearls running low?)", optional: true },
+  };
+  editor = UI.Editor($("#editor"), EXPECT);
+  $("#sound").replaceChildren(GAME.soundButton());
+  UI.CodePanel($("#code"), { file: "shop.py", source: (await UI.api("/api/code", {}))["shop.py"], onSaved: () => newDay().catch(e => showError(e.message)) });
+  $("#newDay").onclick = () => newDay().catch(e => showError(e.message));
+  $("#next").onclick = nextRound;
+  $("#play").onclick = () => { if (playing) return stop(); if (!day || day.view.done) return; playing = true; $("#play").textContent = "⏸ Pause"; loop(); };
+  $("#manager").onchange = () => { if (day && !day.log.length) day.manager = $("#manager").value; render(); };
+  await newDay();
+})();
+</script>
+</body>
+</html>

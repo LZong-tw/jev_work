@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="690" height="188" viewBox="0 0 690 188" role="img" aria-label="Level 3: safety gate decisions"><title>Level 3: safety gate decisions</title><style>
+  .t { fill: #0b0b0b; font: 13px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .m { fill: #52514e; font: 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .w { fill: #ffffff; font: 600 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .grid { stroke: #e4e2dc; stroke-width: 1; }
+  .ref { stroke: #52514e; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .s1 { fill: #2a78d6; } .s1l { stroke: #2a78d6; } .s2 { fill: #eb6834; }
+  .mean { stroke: #0b0b0b; stroke-width: 2.5; }
+  @media (prefers-color-scheme: dark) {
+    .t { fill: #ffffff; } .m { fill: #c3c2b7; } .grid { stroke: #3a3936; } .ref { stroke: #c3c2b7; }
+    .s1 { fill: #3987e5; } .s1l { stroke: #3987e5; } .s2 { fill: #d95926; } .mean { stroke: #ffffff; }
+  }
+</style><text class="m" x="230" y="20">out of 16 tool calls (mean of the repeats)</text><text class="t" x="220" y="51" text-anchor="end">starter gate</text><path d="M230.0,34.0 H569.2 Q569.2,34.0 569.2,34.0 V60.0 Q569.2,60.0 569.2,60.0 H230.0 Z" fill="#0ca30c"/><text class="w" x="238" y="51" style="fill:#fff">✓ 13</text><path d="M571.2,34.0 H646.0 Q650.0,34.0 650.0,38.0 V56.0 Q650.0,60.0 646.0,60.0 H571.2 Z" fill="#fab219"/><text class="t" x="579.25" y="51" style="fill:#0b0b0b">? 3</text><text class="t" x="220" y="95" text-anchor="end">A: Jev judges, code decides</text><path d="M230.0,78.0 H621.8 Q621.8,78.0 621.8,78.0 V104.0 Q621.8,104.0 621.8,104.0 H230.0 Z" fill="#0ca30c"/><text class="w" x="238" y="95" style="fill:#fff">✓ 15</text><path d="M623.8,78.0 H646.0 Q650.0,78.0 650.0,82.0 V100.0 Q650.0,104.0 646.0,104.0 H623.8 Z" fill="#fab219"/><text class="t" x="220" y="139" text-anchor="end">B: Jev decides from a policy</text><path d="M230.0,122.0 H569.2 Q569.2,122.0 569.2,122.0 V148.0 Q569.2,148.0 569.2,148.0 H230.0 Z" fill="#0ca30c"/><text class="w" x="238" y="139" style="fill:#fff">✓ 13</text><path d="M571.2,122.0 H621.8 Q621.8,122.0 621.8,122.0 V148.0 Q621.8,148.0 621.8,148.0 H571.2 Z" fill="#fab219"/><text class="t" x="579.25" y="139" style="fill:#0b0b0b">? 2</text><path d="M623.8,122.0 H646.0 Q650.0,122.0 650.0,126.0 V144.0 Q650.0,148.0 646.0,148.0 H623.8 Z" fill="#d03b3b"/><rect x="230" y="168" width="10" height="10" rx="2" fill="#0ca30c"/><text class="m" x="244" y="177">correct</text><rect x="297" y="168" width="10" height="10" rx="2" fill="#fab219"/><text class="m" x="311" y="177">not exact, but safe</text><rect x="448" y="168" width="10" height="10" rx="2" fill="#d03b3b"/><text class="m" x="462" y="177">unsafe</text></svg>

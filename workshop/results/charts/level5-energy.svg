@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="288" viewBox="0 0 720 288" role="img" aria-label="Level 5: energy over one stream"><title>Level 5: energy over one stream</title><style>
+  .t { fill: #0b0b0b; font: 13px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .m { fill: #52514e; font: 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .w { fill: #ffffff; font: 600 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .grid { stroke: #e4e2dc; stroke-width: 1; }
+  .ref { stroke: #52514e; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .s1 { fill: #2a78d6; } .s1l { stroke: #2a78d6; } .s2 { fill: #eb6834; }
+  .mean { stroke: #0b0b0b; stroke-width: 2.5; }
+  @media (prefers-color-scheme: dark) {
+    .t { fill: #ffffff; } .m { fill: #c3c2b7; } .grid { stroke: #3a3936; } .ref { stroke: #c3c2b7; }
+    .s1 { fill: #3987e5; } .s1l { stroke: #3987e5; } .s2 { fill: #d95926; } .mean { stroke: #ffffff; }
+  }
+</style><line class="grid" x1="259.0" x2="259.0" y1="26" y2="264"/><text class="m" x="259.0" y="280" text-anchor="middle">0</text><text class="m" x="230" y="16">energy used (idling vehicle-ticks): less is better</text><text class="t" x="220" y="47" text-anchor="end">fixed timer (no AI)</text><rect class="s1" x="259.0" y="32" width="362.1" height="22" rx="4"/><text class="t" x="627.0" y="47" style="font-weight:600">6930.0</text><text class="t" x="220" y="85" text-anchor="end">simple rules (no AI)</text><rect class="s1" x="259.0" y="70" width="290.8" height="22" rx="4"/><text class="t" x="555.8" y="85" style="font-weight:600">5566.0</text><text class="t" x="220" y="123" text-anchor="end">Jev, current tick only</text><rect class="s1" x="259.0" y="108" width="268.5" height="22" rx="4"/><text class="t" x="533.5" y="123" style="font-weight:600">5140.0</text><text class="t" x="220" y="161" text-anchor="end">Jev, full history (starter)</text><rect class="s1" x="259.0" y="146" width="349.0" height="22" rx="4"/><text class="t" x="614.0" y="161" style="font-weight:600">6680.0</text><text class="t" x="220" y="199" text-anchor="end">A: history + coach lessons</text><rect class="s1" x="259.0" y="184" width="337.4" height="22" rx="4"/><text class="t" x="602.3" y="199" style="font-weight:600">6457.0</text><text class="t" x="220" y="237" text-anchor="end">B: last 20 ticks + lessons</text><rect class="s1" x="259.0" y="222" width="339.7" height="22" rx="4"/><text class="t" x="604.6" y="237" style="font-weight:600">6501.0</text></svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="212" viewBox="0 0 720 212" role="img" aria-label="Level 4: tea shop points per day"><title>Level 4: tea shop points per day</title><style>
+  .t { fill: #0b0b0b; font: 13px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .m { fill: #52514e; font: 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .w { fill: #ffffff; font: 600 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .grid { stroke: #e4e2dc; stroke-width: 1; }
+  .ref { stroke: #52514e; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .s1 { fill: #2a78d6; } .s1l { stroke: #2a78d6; } .s2 { fill: #eb6834; }
+  .mean { stroke: #0b0b0b; stroke-width: 2.5; }
+  @media (prefers-color-scheme: dark) {
+    .t { fill: #ffffff; } .m { fill: #c3c2b7; } .grid { stroke: #3a3936; } .ref { stroke: #c3c2b7; }
+    .s1 { fill: #3987e5; } .s1l { stroke: #3987e5; } .s2 { fill: #d95926; } .mean { stroke: #ffffff; }
+  }
+</style><line class="grid" x1="354.1" x2="354.1" y1="26" y2="188"/><text class="m" x="354.1" y="204" text-anchor="middle">0</text><text class="m" x="230" y="16">points per day, mean of 10 days × 3 repeats (line = lowest to highest repeat)</text><line class="ref" x1="621.0" x2="621.0" y1="26" y2="188"/><text class="m" x="617.0" y="186" text-anchor="end">best 56.1</text><text class="t" x="220" y="47" text-anchor="end">rules (no AI)</text><rect class="s1" x="354.1" y="32" width="195.1" height="22" rx="4"/><text class="t" x="555.2" y="47" style="font-weight:600">41.0</text><text class="t" x="220" y="85" text-anchor="end">starter Jev</text><rect class="s1" x="272.4" y="70" width="81.7" height="22" rx="4"/><line class="mean" x1="259.0" x2="292.3" y1="81.0" y2="81.0" style="stroke-width:1.5"/><text class="t" x="360.1" y="85" style="font-weight:600">-17.2</text><text class="t" x="220" y="123" text-anchor="end">A: day question + advice</text><rect class="s1" x="354.1" y="108" width="197.8" height="22" rx="4"/><line class="mean" x1="551.6" x2="552.5" y1="119.0" y2="119.0" style="stroke-width:1.5"/><text class="t" x="558.5" y="123" style="font-weight:600">41.6</text><text class="t" x="220" y="161" text-anchor="end">B: A + guard rules in code</text><rect class="s1" x="354.1" y="146" width="260.1" height="22" rx="4"/><line class="mean" x1="613.4" x2="615.8" y1="157.0" y2="157.0" style="stroke-width:1.5"/><text class="t" x="621.8" y="161" style="font-weight:600">54.7</text></svg>

@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jev Sandbox</title>
+<link rel="stylesheet" href="/ui/ui.css">
+<link rel="stylesheet" href="/ui/game.css">
+<style>
+  .sandbox { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; padding: 16px; align-items: start; }
+  @media (max-width: 1150px) { .sandbox { grid-template-columns: 1fr; } }
+  .wide { grid-column: 1 / -1; }
+  .card h2 { font: 11px/1.6 var(--pixel); margin: 0 0 10px; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+  .card h2 .l { display: flex; align-items: center; gap: 8px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; }
+  textarea.state { width: 100%; min-height: 96px; resize: vertical; padding: 8px; font: 13px/1.45 var(--mono); color: var(--ink); }
+  .seg { display: inline-flex; } .seg button { padding: 3px 10px; font-size: 12px; } .seg button.on { background: #ffcd38; color: #0b0f14; }
+  .tree { font: 12px/1.6 var(--mono); margin-top: 8px; max-height: 220px; overflow: auto; background: #0b0e1d; border: 2px solid #05070f; padding: 6px 8px; }
+  .tree details { margin-left: 14px; } .tree summary { cursor: pointer; color: #8ecbff; }
+  .tree .k { color: #ff8fb1; } .tree .s { color: #b9e88f; } .tree .n { color: #ffd479; } .tree .b { color: #c38bff; }
+  .q { margin-top: 10px; background: #0f1328; }
+  .q .head { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .q .head input.id { width: 150px; font-family: var(--mono); }
+  .q textarea { width: 100%; min-height: 44px; padding: 6px 8px; resize: vertical; }
+  .q .items { display: grid; gap: 4px; margin-top: 6px; }
+  .q .item { display: grid; grid-template-columns: 160px minmax(0, 1fr) auto; gap: 6px; }
+  .q .item.lv { grid-template-columns: 30px minmax(0, 1fr) auto auto auto; align-items: center; }
+  .q .kind { font: 9px var(--pixel); padding: 3px 6px; background: #2a3160; }
+  .q .x { padding: 1px 7px; }
+  .errs { color: var(--red); font-size: 12.5px; margin: 8px 0 0; padding-left: 18px; }
+  .ask { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  .ask .primary { font-size: 12px; padding: 10px 16px; }
+  .answers { display: grid; gap: 12px; }
+  .ans h3 { margin: 0 0 6px; font: 10px/1.6 var(--pixel); display: flex; justify-content: space-between; gap: 8px; }
+  .ans .instr { color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
+  .gauge svg { width: 240px; height: 140px; display: block; }
+  .gauge .needle { transition: transform .9s steps(12); }
+  .gauge .val { font: 18px var(--pixel); }
+  .bars { display: grid; grid-template-columns: 24px 130px minmax(0, 1fr) 46px; gap: 6px 8px; align-items: center; font-size: 13px; }
+  .bars .win { color: #ffcd38; font-weight: 700; }
+  .scale { position: relative; height: 70px; margin: 8px 6px 0; }
+  .scale .rail { position: absolute; left: 0; right: 0; top: 34px; height: 8px; background: linear-gradient(90deg, #3987e5, #ffb020, #ff4d55); border: 2px solid #05070f; }
+  .scale .tick { position: absolute; top: 46px; transform: translateX(-50%); font-size: 11px; color: var(--muted); white-space: nowrap; text-align: center; }
+  .scale .tick:first-of-type { transform: none; } .scale .tick:last-of-type { transform: translateX(-100%); }
+  .scale .hist { position: absolute; bottom: 38px; width: 18px; margin-left: -9px; background: #6ad8ff55; border: 1px solid #6ad8ff; }
+  .scale .mark { position: absolute; top: 14px; margin-left: -12px; transition: left .9s steps(12); }
+  .spread { margin-top: 8px; position: relative; height: 22px; background: #0b0e1d; border: 2px solid #05070f; }
+  .spread span { position: absolute; top: 4px; width: 10px; height: 10px; margin-left: -5px; background: #ffcd38; border: 1px solid #05070f; }
+  .meta { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .meta b { color: #ffcd38; font-family: var(--pixel); font-size: 10px; }
+  .json { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 1150px) { .json { grid-template-columns: 1fr; } }
+  .json textarea { width: 100%; min-height: 260px; resize: vertical; font: 12px/1.45 var(--mono); padding: 8px; color: #d6e2ee; }
+  .hist-list { display: grid; gap: 4px; max-height: 260px; overflow-y: auto; }
+  .hist-list button { text-align: left; display: grid; grid-template-columns: 40px 70px minmax(0, 1fr) 110px 80px 70px; gap: 8px; font-size: 12px; padding: 5px 8px; }
+  .empty { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧪 Jev Sandbox</h1>
+  <label class="hint">Template <select id="tpl" aria-label="Template"></select></label>
+  <label class="hint">Model <select id="model" aria-label="Model"></select></label>
+  <span class="grow"></span>
+  <span id="sound"></span>
+  <span class="meter" id="meter"></span>
+</header>
+<div class="sandbox">
+  <section class="card" id="builder">
+    <h2><span class="l" id="inTitle">INPUT</span><span class="hint" style="font-family:system-ui">what Jev reads, and what you ask</span></h2>
+    <div class="row"><b>State</b><span class="seg" id="stateMode"><button data-m="text">Text</button><button data-m="json">JSON object</button></span>
+      <span class="grow"></span><span class="hint" id="stateInfo"></span></div>
+    <textarea class="state" id="state" spellcheck="false" aria-label="State" style="margin-top:6px"></textarea>
+    <div id="tree"></div>
+    <div class="row" style="margin-top:12px"><b>Questions</b><span class="grow"></span>
+      <button id="addNoul" type="button">+ yes/no</button><button id="addChoice" type="button">+ choice</button><button id="addScore" type="button">+ score</button></div>
+    <div id="questions"></div>
+    <ul class="errs" id="errs"></ul>
+    <div class="ask"><button class="primary" id="send">▶ ASK JEV</button><button id="send5" title="Ask the same 5 times: how much do the answers move?">Ask 5×</button>
+      <span class="hint" id="status"></span></div>
+  </section>
+  <section class="card">
+    <h2><span class="l" id="outTitle">OUTPUT</span><span class="hint" style="font-family:system-ui">every answer as a widget</span></h2>
+    <div class="answers" id="answers"><div class="empty">Build a request on the left (or pick a template), then press ▶ ASK JEV.</div></div>
+    <div class="meta" id="meta"></div>
+  </section>
+  <section class="card wide">
+    <h2><span class="l">THE JSON</span><span class="hint" style="font-family:system-ui">POST /v1/systemone · paste a request and press Load to edit it above</span></h2>
+    <div class="json">
+      <div><div class="row"><b>Request</b><span class="grow"></span><button id="load" type="button">Load into the form</button><button id="copyReq" type="button">Copy</button></div>
+        <textarea id="reqJson" spellcheck="false" aria-label="Request JSON"></textarea></div>
+      <div><div class="row"><b>Response</b><span class="grow"></span><button id="copyRes" type="button">Copy</button></div>
+        <textarea id="resJson" spellcheck="false" readonly aria-label="Response JSON"></textarea></div>
+    </div>
+  </section>
+  <section class="card wide">
+    <h2><span class="l">HISTORY</span><span class="hint" style="font-family:system-ui">click a call to bring it back</span></h2>
+    <div class="hist-list" id="history"><div class="empty">No calls yet.</div></div>
+  </section>
+</div>
+<script src="/ui/ui.js"></script>
+<script src="/ui/game.js"></script>
+<script>
+"use strict";
+const { el, $ } = UI;
+const NS = "http://www.w3.org/2000/svg";
+const svg = (tag, attrs = {}, ...kids) => { const e = document.createElementNS(NS, tag); Object.entries(attrs).forEach(([k, v]) => e.setAttribute(k, v)); kids.forEach(k => e.append(k)); return e; };
+const KIND = { noul: { label: "YES/NO", sprite: "check" }, choice: { label: "CHOICE", sprite: "trophy" }, score: { label: "SCORE", sprite: "star" } };
+
+// ----- the request being built: { state, stateMode, questions: [{ id, type, instructions, yes, no, labels: [[label, meaning]], levels: [] }] } -----
+let level, form = { state: "", stateMode: "text", questions: [] }, history = [], shown = null;
+
+function toRequest() {   // the form -> the exact JSON for POST /v1/systemone (jev.py adds the model)
+  const state = form.stateMode === "json" ? JSON.parse(form.state) : form.state;
+  const questions = Object.fromEntries(form.questions.map(q => [q.id.trim(), q.type === "noul"
+    ? { type: "noul", instructions: q.instructions, ...(q.yes || q.no ? { criteria: { true: q.yes || null, false: q.no || null } } : {}) }
+    : q.type === "choice" ? { type: "choice", instructions: q.instructions, criteria: Object.fromEntries(q.labels.map(([l, m]) => [l.trim(), m.trim() || null])) }
+    : { type: "score", instructions: q.instructions, criteria: q.levels.map(l => l.trim()) }]));
+  return { state, questions, model: $("#model").value };
+}
+function fromRequest(req) {   // any request JSON -> the form
+  const isText = typeof req.state === "string";
+  form = { stateMode: isText ? "text" : "json", state: isText ? req.state : JSON.stringify(req.state, null, 2), questions: Object.entries(req.questions || {}).map(([id, q]) => ({
+    id, type: q.type, instructions: q.instructions || "",
+    yes: q.criteria && q.type === "noul" ? q.criteria.true || "" : "", no: q.criteria && q.type === "noul" ? q.criteria.false || "" : "",
+    labels: q.type === "choice" ? Object.entries(q.criteria || {}).map(([l, m]) => [l, m || ""]) : [["", ""], ["", ""]],
+    levels: q.type === "score" ? [...(q.criteria || [])] : ["low", "high"] })) };
+  if (req.model && [...$("#model").options].some(o => o.value === req.model)) $("#model").value = req.model;
+}
+function problems() {   // what is wrong with the form, in words (nothing = it can be sent)
+  const errs = [];
+  if (form.stateMode === "json") { try { const v = JSON.parse(form.state); if (v === null || typeof v !== "object") errs.push("State: a JSON object (or switch to Text)."); } catch (e) { errs.push(`State is not valid JSON: ${e.message}`); } }
+  else if (!form.state.trim()) errs.push("State: write what Jev should read.");
+  if (!form.questions.length) errs.push("Add a question: + yes/no, + choice or + score.");
+  const ids = form.questions.map(q => q.id.trim());
+  form.questions.forEach((q, i) => {
+    const n = `Question ${i + 1}`;
+    if (!/^[A-Za-z_][\w]*$/.test(q.id.trim())) errs.push(`${n}: its id is a short name like "happy" (letters, digits, _).`);
+    else if (ids.indexOf(q.id.trim()) !== i) errs.push(`${n}: the id "${q.id.trim()}" is used twice.`);
+    if (!q.instructions.trim()) errs.push(`${n}: write the question.`);
+    if (q.type === "choice") {
+      const labels = q.labels.map(([l]) => l.trim());
+      if (labels.filter(Boolean).length < 2 || labels.some(l => !l)) errs.push(`${n}: at least 2 labels, none empty.`);
+      if (new Set(labels).size !== labels.length) errs.push(`${n}: every label once.`);
+    }
+    if (q.type === "score" && (q.levels.length < 2 || q.levels.length > 10 || q.levels.some(l => !l.trim()))) errs.push(`${n}: 2 to 10 levels, lowest first, none empty.`);
+  });
+  return errs;
+}
+
+// ----- the builder ---------------------------------------------------------------------------------------
+function jsonTree(v, key) {   // a JSON value as a little tree: objects and arrays fold
+  const k = key === undefined ? null : el("span", { class: "k" }, `${key}: `);
+  if (v !== null && typeof v === "object") {
+    const entries = Array.isArray(v) ? v.map((x, i) => [i, x]) : Object.entries(v);
+    return el("details", { open: true }, el("summary", {}, k, Array.isArray(v) ? `[${entries.length}]` : `{${entries.length}}`), ...entries.map(([kk, vv]) => el("div", {}, jsonTree(vv, kk))));
+  }
+  return el("span", {}, k, el("span", { class: typeof v === "string" ? "s" : typeof v === "number" ? "n" : "b" }, JSON.stringify(v)));
+}
+function renderState() {
+  document.querySelectorAll("#stateMode button").forEach(b => b.classList.toggle("on", b.dataset.m === form.stateMode));
+  if ($("#state").value !== form.state) $("#state").value = form.state;
+  let tree = null, info = `${form.state.length} characters`;
+  if (form.stateMode === "json") {
+    try { const v = JSON.parse(form.state); tree = el("div", { class: "tree" }, jsonTree(v)); info = "valid JSON"; } catch (e) { info = "not valid JSON yet"; }
+  }
+  $("#tree").replaceChildren(...(tree ? [tree] : []));
+  $("#stateInfo").textContent = info;
+}
+function renderQuestions() {
+  $("#questions").replaceChildren(...form.questions.map((q, i) => {
+    const up = () => { if (i) { [form.questions[i - 1], form.questions[i]] = [form.questions[i], form.questions[i - 1]]; changed(true); } };
+    const field = (value, set, attrs = {}) => el("input", { type: "text", value, oninput: e => { set(e.target.value); changed(); }, ...attrs });
+    const body = q.type === "noul"
+      ? el("div", { class: "items" }, el("div", { class: "item" }, el("span", { class: "hint" }, "YES means (optional)"), field(q.yes, v => { q.yes = v; }, { placeholder: "e.g. unsolicited ads or scams" }), el("span")),
+          el("div", { class: "item" }, el("span", { class: "hint" }, "NO means (optional)"), field(q.no, v => { q.no = v; }, { placeholder: "e.g. normal messages from people" }), el("span")))
+      : q.type === "choice"
+      ? el("div", { class: "items" }, ...q.labels.map((pair, j) => el("div", { class: "item" }, field(pair[0], v => { pair[0] = v; }, { placeholder: "label", "aria-label": "label" }),
+            field(pair[1], v => { pair[1] = v; }, { placeholder: "what it means (optional)", "aria-label": "meaning" }),
+            el("button", { class: "x", type: "button", title: "remove", onclick: () => { q.labels.splice(j, 1); changed(true); } }, "✕"))),
+          el("div", {}, el("button", { type: "button", onclick: () => { q.labels.push(["", ""]); changed(true); } }, "+ label")))
+      : el("div", { class: "items" }, ...q.levels.map((lv, j) => el("div", { class: "item lv" }, el("span", { class: "hint" }, `${j}`),
+            field(lv, v => { q.levels[j] = v; }, { "aria-label": `level ${j}` }),
+            el("button", { class: "x", type: "button", title: "lower", onclick: () => { if (j) { [q.levels[j - 1], q.levels[j]] = [q.levels[j], q.levels[j - 1]]; changed(true); } } }, "▲"),
+            el("button", { class: "x", type: "button", title: "higher", onclick: () => { if (j < q.levels.length - 1) { [q.levels[j + 1], q.levels[j]] = [q.levels[j], q.levels[j + 1]]; changed(true); } } }, "▼"),
+            el("button", { class: "x", type: "button", title: "remove", onclick: () => { q.levels.splice(j, 1); changed(true); } }, "✕"))),
+          el("div", {}, el("button", { type: "button", onclick: () => { q.levels.push(""); changed(true); } }, "+ level"), el("span", { class: "hint" }, "  lowest first")));
+    return el("div", { class: "card q" },
+      el("div", { class: "head" }, GAME.sprite(KIND[q.type].sprite, 3), el("span", { class: "kind" }, KIND[q.type].label),
+        field(q.id, v => { q.id = v; }, { class: "id", placeholder: "id", "aria-label": "question id" }), el("span", { class: "grow" }),
+        el("button", { class: "x", type: "button", title: "up", onclick: up }, "▲"),
+        el("button", { class: "x", type: "button", title: "remove the question", onclick: () => { form.questions.splice(i, 1); changed(true); } }, "✕")),
+      el("textarea", { "aria-label": "the question", placeholder: "the question, e.g. Is the customer happy?", oninput: e => { q.instructions = e.target.value; changed(); } }, q.instructions),
+      body);
+  }));
+}
+function changed(redraw) {   // the form changed: the JSON follows; problems are shown
+  if (redraw) renderQuestions();
+  const errs = problems();
+  $("#errs").replaceChildren(...errs.map(m => el("li", {}, m)));
+  $("#send").disabled = $("#send5").disabled = errs.length > 0;
+  if (!errs.length && document.activeElement !== $("#reqJson")) $("#reqJson").value = JSON.stringify(toRequest(), null, 2);
+  $("#inTitle").replaceChildren(GAME.sprite("mail", 3), `INPUT · ${form.questions.length} question${form.questions.length === 1 ? "" : "s"}`);
+}
+function addQuestion(type) {
+  const n = form.questions.filter(q => q.type === type).length + 1;
+  form.questions.push({ id: { noul: "yes_no", choice: "pick", score: "rate" }[type] + (n > 1 ? n : ""), type, instructions: "", yes: "", no: "",
+                        labels: [["", ""], ["", ""]], levels: ["low", "medium", "high"] });
+  changed(true); GAME.sfx("blip");
+}
+
+// ----- the answers: one widget per question ----------------------------------------------------------------
+function gauge(p, spread) {   // a yes/no: a needle from NO (left) to YES (right), 20 lamps lit up to p
+  const cx = 120, cy = 118, r = 92, angle = t => Math.PI * (1 - t);
+  const lamps = Array.from({ length: 20 }, (_, i) => {
+    const t = (i + 0.5) / 20, a = angle(t), x = cx + r * Math.cos(a), y = cy - r * Math.sin(a), hue = Math.round(t * 120);
+    return svg("rect", { x: x - 6, y: y - 6, width: 12, height: 12, fill: t <= p ? `hsl(${hue} 85% 55%)` : "#1c2236", stroke: "#05070f", "stroke-width": 2,
+                         transform: `rotate(${90 - a * 180 / Math.PI} ${x} ${y})` });
+  });
+  const needle = svg("g", { class: "needle", style: `transform-origin:${cx}px ${cy}px;transform:rotate(${(p - 0.5) * 180}deg)` },
+    svg("rect", { x: cx - 3, y: cy - r + 16, width: 6, height: r - 16, fill: "#f5f7fa", stroke: "#05070f", "stroke-width": 2 }));
+  const box = el("div", { class: "gauge row" }, svg("svg", { viewBox: "0 0 240 140" }, ...lamps, needle,
+      svg("rect", { x: cx - 9, y: cy - 9, width: 18, height: 18, fill: "#ffcd38", stroke: "#05070f", "stroke-width": 3 }),
+      svg("text", { x: 14, y: 136, fill: "#ff4d55", "font-size": 11, "font-family": "monospace" }, "NO"),
+      svg("text", { x: 206, y: 136, fill: "#2fd27a", "font-size": 11, "font-family": "monospace" }, "YES")),
+    el("div", {}, el("div", { class: "val" }, p.toFixed(2)), el("div", { class: "hint" }, `${Math.round(p * 100)}% chance of YES`),
+       el("div", { class: `tag ${p >= 0.5 ? "yes" : "no"}`, style: "margin-top:6px" }, p >= 0.5 ? "YES" : "NO")));
+  return spread ? [box, spreadStrip(spread, 0, 1)] : [box];
+}
+function bars(a, labels, spread) {   // a choice: every label's probability, the winner crowned
+  const probs = Object.entries(a.probabilities || { [a.choice]: a.confidence ?? 1 }).sort((x, y) => y[1] - x[1]);
+  const wins = spread ? spread.reduce((m, c) => ({ ...m, [c]: (m[c] || 0) + 1 }), {}) : null;
+  return [el("div", { class: "bars" }, ...probs.flatMap(([label, p]) => [
+      label === a.choice ? GAME.sprite("trophy", 2) : el("span"), el("span", { class: label === a.choice ? "win" : "" }, label + (wins ? ` (${wins[label] || 0}×)` : "")),
+      UI.pbar(p, undefined, label === a.choice ? "#ffcd38" : undefined), el("span", {}, p.toFixed(2))])),
+    el("div", { class: "hint", style: "margin-top:6px" }, `confidence ${(a.confidence ?? 0).toFixed(2)}${labels && labels[a.choice] ? ` · ${a.choice}: ${labels[a.choice]}` : ""}`)];
+}
+function scaleWidget(a, levels, spread) {   // a score: a scale from the lowest level to the highest, the marker at the score
+  const n = levels.length, at = v => `${v / (n - 1) * 100}%`, probs = a.probabilities || {};
+  return [el("div", { class: "scale" }, el("div", { class: "rail" }),
+      ...levels.map((lv, i) => el("div", { class: "hist", style: `left:${at(i)};height:${Math.round((probs[i] ?? probs[String(i)] ?? 0) * 30)}px`, title: `${lv}: ${(probs[i] ?? 0)}` })),
+      ...levels.map((lv, i) => el("span", { class: "tick", style: `left:${at(i)}` }, lv)),
+      el("span", { class: "mark", style: `left:${at(a.score)}` }, GAME.sprite("star", 3))),
+    el("div", { class: "row", style: "margin-top:4px" }, el("span", { class: "val", style: "font:16px var(--pixel)" }, a.score.toFixed(2)),
+      el("span", { class: "hint" }, `of ${n - 1} · nearest level: ${levels[Math.max(0, Math.min(n - 1, Math.round(a.score)))]} · confidence ${(a.confidence ?? 0).toFixed(2)}`)),
+    ...(spread ? [spreadStrip(spread, 0, n - 1)] : [])];
+}
+function spreadStrip(values, lo, hi) {   // "Ask 5×": where every answer landed
+  return el("div", {}, el("div", { class: "hint", style: "margin-top:8px" }, `${values.length} answers: ${values.map(v => v.toFixed(2)).join(" · ")}  (spread ${(Math.max(...values) - Math.min(...values)).toFixed(2)})`),
+    el("div", { class: "spread" }, ...values.map(v => el("span", { style: `left:${(v - lo) / (hi - lo) * 100}%` }))));
+}
+function renderAnswers(entry) {
+  shown = entry;
+  const { request, results } = entry, last = results[results.length - 1], qs = request.questions;
+  $("#answers").replaceChildren(...Object.entries(last.answers).map(([id, a]) => {
+    const q = qs[id] || {}, all = results.map(r => r.answers[id]).filter(Boolean), many = all.length > 1;
+    const widget = a.type === "noul" || "noul" in a ? gauge(a.noul, many ? all.map(x => x.noul) : null)
+      : a.type === "choice" || "choice" in a ? bars(a, q.criteria, many ? all.map(x => x.choice) : null)
+      : a.type === "score" || "score" in a ? scaleWidget(a, Array.isArray(q.criteria) ? q.criteria : Object.values(a.legend || {}), many ? all.map(x => x.score) : null)
+      : [el("pre", {}, JSON.stringify(a, null, 2))];
+    return el("div", { class: "card ans" }, el("h3", {}, el("span", {}, `${id}`), el("span", { class: "hint", style: "font-family:system-ui" }, (KIND[a.type] || {}).label || a.type || "")),
+      el("div", { class: "instr" }, q.instructions || ""), ...widget);
+  }));
+  const tokens = results.reduce((s, r) => s + ((r.usage && r.usage.input_tokens) || 0), 0), cost = results.reduce((s, r) => s + (r.cost_usd || 0), 0);
+  $("#meta").replaceChildren(el("span", {}, "model ", el("b", {}, last.model || "?")), el("span", {}, "calls ", el("b", {}, results.length)),
+    el("span", {}, "input tokens ", el("b", {}, tokens.toLocaleString())), el("span", {}, "cost ", el("b", {}, `$${cost.toFixed(6)}`)),
+    el("span", {}, "time ", el("b", {}, `${Math.round(results.reduce((s, r) => s + (r.latency_ms || 0), 0) / results.length)} ms`)));
+  $("#resJson").value = JSON.stringify((({ cost_usd, latency_ms, ...rest }) => rest)(last), null, 2);
+  $("#outTitle").replaceChildren(GAME.sprite("gem", 3), `OUTPUT · ${Object.keys(last.answers).length} answer${Object.keys(last.answers).length === 1 ? "" : "s"}`);
+}
+function renderHistory() {
+  $("#history").replaceChildren(...(history.length ? history.slice().reverse().map(h => el("button", { type: "button", onclick: () => { fromRequest(h.request); renderState(); changed(true); renderAnswers(h); GAME.sfx("blip"); } },
+    el("b", {}, `#${h.n}`), el("span", {}, h.when), el("span", {}, Object.keys(h.request.questions).join(", ") + (h.results.length > 1 ? `  (${h.results.length}×)` : "")),
+    el("span", {}, `${h.results.reduce((s, r) => s + ((r.usage && r.usage.input_tokens) || 0), 0).toLocaleString()} tokens`),
+    el("span", {}, `$${h.results.reduce((s, r) => s + (r.cost_usd || 0), 0).toFixed(5)}`), el("span", {}, h.results[0].model || ""))) : [el("div", { class: "empty" }, "No calls yet.")]));
+}
+async function send(times) {
+  const errs = problems();
+  if (errs.length) return;
+  const request = toRequest(), results = [];
+  $("#send").disabled = $("#send5").disabled = true;
+  GAME.sfx("blip");
+  try {
+    for (let i = 0; i < times; i++) {   // imperative-ok: the same call, one after another
+      $("#status").textContent = `asking Jev… ${times > 1 ? `${i + 1}/${times}` : ""}`;
+      results.push(await UI.ask(request));
+      GAME.sfx("coin");
+    }
+    const entry = { n: history.length + 1, when: new Date().toLocaleTimeString(), request, results };
+    history.push(entry); renderHistory(); renderAnswers(entry);
+    $("#status").textContent = "";
+    GAME.pop($("#answers"), times > 1 ? `${times} answers` : "answered!", "#2fd27a");
+  } catch (e) {
+    $("#status").textContent = e.message; $("#status").className = "err"; GAME.sfx("hit"); GAME.shake($("#builder"));
+    setTimeout(() => { $("#status").className = "hint"; }, 4000);
+  } finally { changed(); }
+}
+function loadTemplate(i) {
+  $("#tpl").value = String(i);
+  fromRequest(level.templates[i]); renderState(); changed(true);
+}
+
+(async () => {
+  try { level = await UI.boot(); } catch (e) { document.body.prepend(el("div", { class: "err", style: "padding:12px" }, e.message)); return; }
+  $("#sound").replaceChildren(GAME.soundButton());
+  $("#model").replaceChildren(...level.models.map(m => el("option", { value: m }, m)));
+  $("#tpl").replaceChildren(...level.templates.map((t, i) => el("option", { value: i }, t.name)));
+  $("#tpl").onchange = e => loadTemplate(+e.target.value);
+  $("#state").oninput = e => { form.state = e.target.value; renderState(); changed(); };
+  document.querySelectorAll("#stateMode button").forEach(b => b.onclick = () => {
+    if (b.dataset.m === form.stateMode) return;
+    if (b.dataset.m === "json" && form.state.trim() && !/^\s*[{[]/.test(form.state)) form.state = JSON.stringify({ text: form.state }, null, 2);
+    form.stateMode = b.dataset.m; renderState(); changed();
+  });
+  $("#addNoul").onclick = () => addQuestion("noul"); $("#addChoice").onclick = () => addQuestion("choice"); $("#addScore").onclick = () => addQuestion("score");
+  $("#send").onclick = () => send(1); $("#send5").onclick = () => send(5);
+  $("#load").onclick = () => {
+    try { const req = JSON.parse($("#reqJson").value); if (!req || typeof req !== "object" || !("questions" in req)) throw new Error('a request has "state" and "questions"');
+          fromRequest(req); renderState(); changed(true); GAME.sfx("blip"); }
+    catch (e) { $("#status").textContent = `Load: ${e.message}`; GAME.sfx("hit"); }
+  };
+  $("#copyReq").onclick = () => navigator.clipboard && navigator.clipboard.writeText($("#reqJson").value);
+  $("#copyRes").onclick = () => navigator.clipboard && navigator.clipboard.writeText($("#resJson").value);
+  loadTemplate(1);
+})();
+</script>
+</body>
+</html>

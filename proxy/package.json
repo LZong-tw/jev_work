@@ -1,0 +1,20 @@
+{
+  "name": "jev-proxy",
+  "version": "1.0.0",
+  "description": "Drop-in proxy for the Jev Decision API. Hand out your own keys, keep your Jev key private.",
+  "type": "module",
+  "main": "src/server.js",
+  "bin": {
+    "jev-proxy": "src/server.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "mock": "MOCK_UPSTREAM=1 node src/server.js",
+    "keys": "node scripts/create-keys.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "license": "MIT"
+}

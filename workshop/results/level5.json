@@ -1,0 +1,196 @@
+{
+ "level": 5,
+ "repeats": 1,
+ "model": "jev-latest",
+ "date": "2026-10-02",
+ "seconds": 146,
+ "calls": 760,
+ "input_tokens": 6021364,
+ "cost_usd": 0.2529,
+ "data": {
+  "seed": 2026,
+  "ticks": 200,
+  "configs": {
+   "fixed timer (no AI)": [
+    {
+     "score": -317.6,
+     "energy": 6930,
+     "blocks": [
+      -57.0,
+      -157.7,
+      -17.6,
+      -85.3
+     ],
+     "energy_blocks": [
+      989,
+      1554,
+      1808,
+      2579
+     ],
+     "calls": 0,
+     "tokens": 0,
+     "walks": 45,
+     "pedestrians_at_end": 5,
+     "parts": {
+      "crossed": 688.0,
+      "walked": 0.0,
+      "stopped": -346.5,
+      "pedestrians_waiting": -192.1,
+      "angry": -127.0,
+      "ambulance_stopped": -340.0
+     }
+    }
+   ],
+   "simple rules (no AI)": [
+    {
+     "score": 165.3,
+     "energy": 5566,
+     "blocks": [
+      25.4,
+      68.7,
+      50.8,
+      20.4
+     ],
+     "energy_blocks": [
+      783,
+      1193,
+      1668,
+      1922
+     ],
+     "calls": 0,
+     "tokens": 0,
+     "walks": 32,
+     "pedestrians_at_end": 12,
+     "parts": {
+      "crossed": 739.0,
+      "walked": 0.0,
+      "stopped": -278.3,
+      "pedestrians_waiting": -232.4,
+      "angry": -63.0,
+      "ambulance_stopped": 0.0
+     }
+    }
+   ],
+   "Jev, current tick only": [
+    {
+     "score": -721.9,
+     "energy": 5140,
+     "blocks": [
+      -58.1,
+      -481.3,
+      -118.6,
+      -63.8
+     ],
+     "energy_blocks": [
+      577,
+      1339,
+      1494,
+      1730
+     ],
+     "calls": 196,
+     "tokens": 231096,
+     "walks": 15,
+     "pedestrians_at_end": 20,
+     "parts": {
+      "crossed": 752.0,
+      "walked": 0.0,
+      "stopped": -257.0,
+      "pedestrians_waiting": -655.9,
+      "angry": -561.0,
+      "ambulance_stopped": 0.0
+     }
+    }
+   ],
+   "Jev, full history (starter)": [
+    {
+     "score": -450.2,
+     "energy": 6680,
+     "blocks": [
+      -32.2,
+      -103.9,
+      -181.2,
+      -132.9
+     ],
+     "energy_blocks": [
+      616,
+      1472,
+      2356,
+      2236
+     ],
+     "calls": 195,
+     "tokens": 2606840,
+     "walks": 18,
+     "pedestrians_at_end": 3,
+     "parts": {
+      "crossed": 697.0,
+      "walked": 0.0,
+      "stopped": -334.0,
+      "pedestrians_waiting": -632.2,
+      "angry": -181.0,
+      "ambulance_stopped": 0.0
+     }
+    }
+   ],
+   "A: history + coach lessons": [
+    {
+     "score": -154.05,
+     "energy": 6457,
+     "blocks": [
+      -88.5,
+      -69.4,
+      -16.2,
+      20.0
+     ],
+     "energy_blocks": [
+      969,
+      1728,
+      2068,
+      1692
+     ],
+     "calls": 183,
+     "tokens": 2524237,
+     "walks": 44,
+     "pedestrians_at_end": 16,
+     "parts": {
+      "crossed": 703.0,
+      "walked": 0.0,
+      "stopped": -322.8,
+      "pedestrians_waiting": -257.2,
+      "angry": -277.0,
+      "ambulance_stopped": 0.0
+     }
+    }
+   ],
+   "B: last 20 ticks + lessons": [
+    {
+     "score": -71.05,
+     "energy": 6501,
+     "blocks": [
+      -57.6,
+      5.4,
+      1.2,
+      -20.1
+     ],
+     "energy_blocks": [
+      909,
+      1563,
+      1862,
+      2167
+     ],
+     "calls": 186,
+     "tokens": 659191,
+     "walks": 54,
+     "pedestrians_at_end": 7,
+     "parts": {
+      "crossed": 642.0,
+      "walked": 0.0,
+      "stopped": -325.1,
+      "pedestrians_waiting": -177.0,
+      "angry": -211.0,
+      "ambulance_stopped": 0.0
+     }
+    }
+   ]
+  }
+ }
+}

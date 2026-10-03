@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Level 2 · Pick one, and rate it</title>
+<link rel="stylesheet" href="/ui/ui.css">
+<link rel="stylesheet" href="/ui/game.css">
+<style>
+  .wrap { display: flex; flex-direction: column; gap: 12px; }
+  .col-h { display: flex; justify-content: space-between; align-items: baseline; margin: 0 0 8px; font-weight: 700; }
+  .col-h .n { color: var(--muted); font-weight: 400; font-size: 12px; }
+  .inbox { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .inbox .msg { margin: 0; }
+  .board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(140px, 1fr); gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+  .column { background: #121920; border: 1px solid var(--line); border-radius: 12px; padding: 10px; min-height: 260px; }
+  .column.human { border-color: rgba(255,176,32,.5); background: rgba(255,176,32,.05); }
+  .column .desc { color: var(--muted); font-size: 12px; margin: -4px 0 8px; min-height: 30px; }
+  .msg { font-size: 13px; margin-bottom: 8px; }
+  .msg .text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px; }
+  .msg .meta { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-size: 12px; }
+  .msg .guess { color: var(--amber); font-size: 12px; margin-top: 6px; }
+  .landed { animation: land .5s ease; }
+  @keyframes land { from { transform: translateY(-12px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+  .urg { border-radius: 6px; padding: 1px 7px; font-weight: 700; font-size: 11px; white-space: nowrap; }
+  .detail { margin-bottom: 14px; }
+  .detail .rows { display: grid; grid-template-columns: 120px 1fr 44px; gap: 6px 10px; align-items: center; font-size: 13px; }
+  .scale { position: relative; height: 34px; margin-top: 8px; }
+  .scale .line { position: absolute; left: 0; right: 0; top: 10px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, #2a3542, #3987e5, #ffb020, #ff4d55); }
+  .scale .lv { position: absolute; top: 18px; font-size: 11px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+  .scale .lv:first-of-type { transform: none; } .scale .lv:last-of-type { transform: translateX(-100%); }
+  .pwrap { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; align-items: start; }
+  @media (max-width: 1350px) { .pwrap { grid-template-columns: 1fr; } }
+  .addform { display: grid; gap: 6px; margin-bottom: 10px; }
+  .addform textarea { min-height: 64px; resize: vertical; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font: inherit; color: inherit; }
+  .stocks { display: flex; flex-direction: column; gap: 6px; max-height: 560px; overflow-y: auto; }
+  .stock { font-size: 13px; padding: 8px 10px; }
+  .stock .top { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+  .stock .notes { color: var(--muted); font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
+  .stock .x { padding: 0 7px; border-radius: 6px; font-size: 12px; }
+  .todo, .column .desc.todo { color: var(--amber); }
+  .codebox { margin: 12px 0; } .codebox > summary { cursor: pointer; font: 10px/1.8 var(--pixel); } .codebox[open] > summary { margin-bottom: 8px; }
+  .market { margin: 12px 0; }
+  .mtop { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 10px; }
+  .year { font: 16px var(--pixel); color: #6ad8ff; } .total { font: 20px var(--pixel); color: #ffcd38; }
+  .mrows { display: grid; gap: 6px; }
+  .mrow { display: grid; grid-template-columns: 30px 170px 90px minmax(0, 1fr) 130px 60px; gap: 10px; align-items: center; padding: 6px 8px; background: #0b0e1d;
+          border: 2px solid #05070f; font-size: 13px; }
+  @media (max-width: 1300px) { .mrow { grid-template-columns: 30px 140px 80px minmax(0, 1fr) 110px 54px; } }
+  .mrow .val { font: 11px var(--pixel); text-align: right; } .mrow .x { font: 10px var(--pixel); text-align: right; }
+  .mrow.bust { background: #2a0d14; } .mrow.boom { background: #0d2a1a; }
+  .chart svg { width: 100%; height: 150px; display: block; }
+  .scale .mk { position: absolute; top: 4px; width: 14px; height: 16px; margin-left: -7px; border-radius: 4px; background: var(--ink); transition: left .5s; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📬 Level 2 · Pick one, and rate it</h1>
+  <div class="tabs" id="tabs"><button data-tab="inbox" class="on">Inbox</button><button data-tab="portfolio">Portfolio (challenge)</button></div>
+  <span class="grow"></span>
+  <span id="sound"></span>
+  <span class="meter" id="meter"></span>
+</header>
+<div class="layout">
+  <main class="sim">
+   <div id="tab-inbox">
+    <div class="controls">
+      <label>Ask a human below confidence <input type="range" id="minConf" min="0" max="1" step="0.01" aria-label="Minimum confidence"> <b id="minVal"></b></label>
+      <label><input type="checkbox" id="byUrgency" checked> most urgent first</label>
+      <span class="grow" style="flex:1"></span>
+      <button class="primary" id="runAll">▶ Sort the inbox with Jev</button>
+    </div>
+    <div class="hint" id="source" style="margin-bottom:10px"></div>
+    <div class="hud" id="iHud"></div>
+    <div class="card detail" id="detail"></div>
+    <div class="wrap">
+      <section><div class="col-h">Inbox <span class="n" id="inboxN"></span></div><div class="inbox" id="inbox"></div></section>
+      <section class="board" id="board"></section>
+    </div>
+    <details class="card codebox" id="iCodeBox"><summary>✏️ Your code: inbox.py</summary><div id="iCode"></div></details>
+   </div>
+   <div id="tab-portfolio" hidden>
+    <div class="controls">
+      <label>Ask a human below confidence <input type="range" id="pMinConf" min="0" max="1" step="0.01" aria-label="Minimum confidence for the portfolio"> <b id="pMinVal"></b></label>
+      <span class="grow" style="flex:1"></span>
+      <button class="primary" id="pRunAll">▶ 1. Sort with Jev</button>
+      <button class="primary" id="pInvest" disabled>💰 2. Invest</button>
+      <button class="primary" id="pForward" disabled>⏩ 3. Fast-forward 10 years</button>
+    </div>
+    <div class="hint" id="pSource" style="margin-bottom:10px"></div>
+    <div class="hud" id="pHud"></div>
+    <section class="card market" id="pMarket" hidden></section>
+    <div class="card detail" id="pDetail"></div>
+    <div class="pwrap">
+      <section class="card">
+        <div class="col-h">Your companies <span class="n" id="pN"></span></div>
+        <form class="addform" id="pAdd">
+          <input type="text" id="pName" placeholder="Company name" maxlength="80" required aria-label="Company name">
+          <textarea id="pNotes" placeholder="What you know: what it sells, how fast it grows, its risks…" maxlength="600" aria-label="Notes about the company"></textarea>
+          <button class="primary" type="submit">+ Add a company</button>
+        </form>
+        <div class="stocks" id="pStocks"></div>
+      </section>
+      <section class="board" id="pBoard"></section>
+    </div>
+    <details class="card codebox" id="pCodeBox"><summary>✏️ Your code: portfolio.py</summary><div id="pCode"></div></details>
+   </div>
+  </main>
+  <aside class="editor" id="editor"></aside>
+</div>
+<script src="/ui/ui.js"></script>
+<script src="/ui/game.js"></script>
+<script>
+"use strict";
+const { el, $ } = UI;
+const EXPECT = {
+  box: { type: "choice", use: "the column the message goes to; its confidence decides HUMAN?", needs: ["confidence"] },
+  urgency: { type: "score", use: "the urgency badge (the levels are the badge words)" },
+};
+const URG_COLORS = ["#2a3542", "#3987e5", "#ffb020", "#ff4d55"];
+let level, editor, opened = null, minConf, runs = [], fresh = new Set();
+
+const requestFor = i => ({ state: level.items[i], questions: level.questions });
+const boxesOf = q => Object.keys(q.box.criteria);
+function urgencyBadge(score, levels) {
+  const k = Math.max(0, Math.min(levels.length - 1, Math.round(score)));
+  const c = URG_COLORS[Math.round(k / Math.max(1, levels.length - 1) * (URG_COLORS.length - 1))];
+  return el("span", { class: "urg", style: `background:${c}33;color:${c === "#2a3542" ? "var(--muted)" : c}`, title: `urgency ${score.toFixed(2)} of ${levels.length - 1}` }, levels[k]);
+}
+function columnOf(r) { return r.box.confidence < minConf ? "HUMAN?" : r.box.choice; }
+
+function render() {
+  $("#minConf").value = minConf; $("#minVal").textContent = minConf.toFixed(2);
+  $("#source").textContent = `From inbox.py: ${level.items.length} messages, QUESTIONS and MIN_CONFIDENCE. ONE Jev call per message answers both questions. Click a message for its JSON.`;
+  const done = runs.map((r, i) => [r, i]).filter(([r]) => r.box);
+  const waiting = runs.map((r, i) => [r, i]).filter(([r]) => !r.box);
+  $("#inboxN").textContent = `${waiting.length} left`;
+  $("#inbox").replaceChildren(...(waiting.length ? [] : [el("span", { class: "hint" }, "Empty: every message is in a box.")]), ...waiting.map(([r, i]) => el("div", { class: `card msg clickable${r.status === "asking" ? " asking" : ""}${opened && opened.i === i ? " sel" : ""}`, onclick: () => openEditor(i) },
+    el("div", { class: "text" }, `${i + 1}. ${level.items[i]}`),
+    el("div", { class: "hint" }, r.status === "asking" ? "Jev is reading…" : r.error ? "" : "not sorted yet"),
+    r.error ? el("div", { class: "err", style: "font-size:12px" }, r.error) : null)));
+  // columns: every box of the questions, any box an answer used, and HUMAN?
+  const cols = [...new Set([...boxesOf(level.questions), ...done.map(([r]) => r.box.choice)])];
+  const byUrg = $("#byUrgency").checked;
+  $("#board").replaceChildren(...[...cols, "HUMAN?"].map(c => {
+    const here = done.filter(([r]) => columnOf(r) === c).sort((a, b) => byUrg ? b[0].urgency.score - a[0].urgency.score : a[1] - b[1]);
+    return el("div", { class: `column${c === "HUMAN?" ? " human" : ""}` },
+      el("div", { class: "col-h" }, c === "HUMAN?" ? "🙋 HUMAN?" : c, el("span", { class: "n" }, here.length)),
+      el("div", { class: "desc" }, c === "HUMAN?" ? `Jev is not sure (confidence below ${minConf.toFixed(2)}): a person checks.` : level.questions.box.criteria[c] || "(a box from an edited request)"),
+      ...here.map(([r, i]) => el("div", { class: `card msg clickable${fresh.has(i) ? " landed" : ""}${opened && opened.i === i ? " sel" : ""}`, onclick: () => openEditor(i) },
+        el("div", { class: "text" }, `${i + 1}. ${level.items[i]}`),
+        el("div", { class: "meta" }, urgencyBadge(r.urgency.score, r.levels), UI.pbar(r.box.confidence, minConf, r.box.confidence < minConf ? "var(--amber)" : "var(--green)"),
+           el("span", { title: "confidence" }, r.box.confidence.toFixed(2))),
+        c === "HUMAN?" ? el("div", { class: "guess" }, `Jev's guess: ${r.box.choice}`) : null)));
+  }));
+  fresh.clear();
+  renderDetail();
+  renderInboxHud();
+}
+// right = the box a person would choose; while there is no box for it, HUMAN? counts as right
+const inboxRight = (r, i) => {
+  const exp = level.expected && level.expected[i];
+  if (!exp || !r.box) return null;
+  const col = columnOf(r);
+  return col === exp || (!(exp in level.questions.box.criteria) && col === "HUMAN?");
+};
+function renderInboxHud() {
+  if (!level.expected) { $("#iHud").hidden = true; return; }
+  const marks = runs.map(inboxRight).filter(x => x !== null), right = marks.filter(Boolean).length, ring = el("div");
+  UI.ScoreRing(ring, { key: "level2-inbox", label: "your inbox router" }).show(right, level.items.length);
+  $("#iHud").replaceChildren(ring, el("div", { class: "item" }, el("span", { class: "lbl" }, "stars"), GAME.stars(right / level.items.length)),
+    el("div", { class: "item" }, el("span", { class: "lbl" }, "sorted"), el("span", { class: "val" }, `${marks.length}/${level.items.length}`)),
+    el("div", { class: "item" }, el("span", { class: "lbl" }, "right"), el("span", { class: "val" }, `${right}`)));
+}
+function renderDetail() {
+  const i = opened ? opened.i : null, r = i === null ? null : runs[i];
+  if (!r || !r.box) {
+    $("#detail").replaceChildren(el("div", { class: "hint" }, i === null ? "Click a sorted message to see how sure Jev was about every box, and where the urgency lands."
+                                                                        : `Message ${i + 1} is not sorted yet. Send it from the Jev editor, or sort the whole inbox.`));
+    return;
+  }
+  const probs = Object.entries(r.box.probabilities || { [r.box.choice]: r.box.confidence }).sort((a, b) => b[1] - a[1]);
+  $("#detail").replaceChildren(
+    el("div", { class: "col-h" }, `Message ${i + 1}: ${r.box.choice}`, el("span", { class: "n" }, `confidence ${r.box.confidence.toFixed(2)} · urgency ${r.urgency.score.toFixed(2)}`)),
+    el("div", { class: "rows" }, ...probs.flatMap(([label, p]) => [el("span", {}, label), UI.pbar(p, undefined, label === r.box.choice ? "var(--green)" : undefined), el("span", {}, p.toFixed(2))])),
+    el("div", { class: "scale" }, el("div", { class: "line" }),
+      ...r.levels.map((lv, k) => el("span", { class: "lv", style: `left:${k / (r.levels.length - 1) * 100}%` }, lv)),
+      el("div", { class: "mk", style: `left:${r.urgency.score / (r.levels.length - 1) * 100}%`, title: r.urgency.score.toFixed(2) })));
+}
+
+function setResult(i, result, request) {
+  Object.assign(runs[i], { box: result.answers.box, urgency: result.answers.urgency, levels: request.questions.urgency.criteria,
+                           status: "done", error: null, response: result, request });
+  fresh.add(i);
+  if (opened && opened.i === i) editor.showResponse(opened.o, result);
+  render();
+  const ok = inboxRight(runs[i], i), card = document.querySelector("#board .landed");
+  GAME.sfx(ok === false ? "hit" : "coin"); GAME.pop(card, ok === false ? "✗" : "+1", ok === false ? "#ff4d55" : "#ffcd38");
+  if (ok === false) GAME.shake(card);
+}
+function openEditor(i) {
+  const r = runs[i];
+  const o = { title: `Message ${i + 1}`, request: r.request || requestFor(i), response: r.response, onResult: (res, req) => setResult(i, res, req) };
+  opened = { i, o }; editor.open(o); render();
+}
+async function runAll() {
+  const btn = $("#runAll");
+  btn.disabled = true;
+  for (let i = 0; i < level.items.length; i++) {   // imperative-ok: one call after another, in order
+    const r = runs[i], request = requestFor(i);
+    r.status = "asking"; r.error = null; render();
+    try {
+      const result = await UI.ask(request);
+      const bad = UI.checkResponse(result, request, EXPECT);
+      if (bad.length) throw new Error(bad.join(" "));
+      setResult(i, result, request);
+    } catch (e) { Object.assign(r, { status: "error", error: e.message }); render(); }
+    await UI.sleep(150);
+  }
+  btn.disabled = false;
+  const right = runs.map(inboxRight).filter(Boolean).length;
+  if (level.expected && right === level.items.length) { GAME.sfx("win"); GAME.banner(`PERFECT! ${right}/${right}`); }
+}
+
+// ----- the portfolio (the challenge): companies sorted into buckets by YOUR portfolio.py ------------------
+// The request for a company comes from the server: YOUR describe() writes the state, YOUR QUESTIONS ask.
+const P_EXPECT = { bucket: { type: "choice", use: "the bucket (column) the company goes to; its confidence decides HUMAN?", needs: ["confidence"] } };
+const STORE = "jev.level2.portfolio";   // the companies you add, kept in this browser
+let P, pMin, pStocks = [], pOpened = null, pFresh = new Set(), tab = "inbox";
+const loadMine = () => { try { return (JSON.parse(localStorage.getItem(STORE) || "[]") || []).filter(x => x && typeof x.name === "string"); } catch { return []; } };
+const saveMine = () => { try { localStorage.setItem(STORE, JSON.stringify(pStocks.filter(x => x.mine).map(({ name, notes }) => ({ name, notes })))); } catch { /* private window: not kept */ } };
+const isTodo = t => typeof t === "string" && /^TODO/i.test(t.trim());
+const pColumn = x => x.answer.confidence < pMin ? "HUMAN?" : x.answer.choice;
+async function pRequest(x) { return x.request || (x.request = await UI.api("/api/portfolio_request", { stock: { name: x.name, notes: x.notes } })); }
+
+function renderPortfolio() {
+  const q = P.questions.bucket, labels = q ? Object.keys(q.criteria) : [];
+  $("#pMinConf").value = pMin; $("#pMinVal").textContent = pMin.toFixed(2);
+  $("#pSource").replaceChildren(`From portfolio.py: ${P.stocks.length} companies, QUESTIONS, MIN_CONFIDENCE and YOUR describe(), which writes what Jev reads about each company. Add your own below. Click a company for its JSON.`,
+    ...(q && isTodo(q.instructions) ? [" ", el("b", { class: "todo" }, "TODO 2 is still open: the question.")] : []),
+    ...(labels.some(l => isTodo(q.criteria[l])) ? [" ", el("b", { class: "todo" }, "TODO 1: say what each bucket means.")] : []));
+  $("#pN").textContent = `${pStocks.length}`;
+  $("#pStocks").replaceChildren(...pStocks.map((x, i) => el("div", { class: `card stock clickable${x.status === "asking" ? " asking" : ""}${pOpened && pOpened.x === x ? " sel" : ""}`, onclick: () => pOpen(x) },
+    el("div", { class: "top" }, el("b", {}, x.name),
+      x.mine ? el("button", { class: "x", title: "remove", onclick: e => { e.stopPropagation(); pRemove(x); } }, "✕") : el("span", { class: "hint" }, "portfolio.py")),
+    x.notes ? el("div", { class: "notes" }, x.notes) : null,
+    el("div", { class: "hint", style: "margin-top:4px" }, x.answer ? `→ ${pColumn(x)} (${x.answer.confidence.toFixed(2)})` : x.status === "asking" ? "Jev is reading…" : "not sorted yet"),
+    x.error ? el("div", { class: "err", style: "font-size:12px" }, x.error) : null)));
+  const done = pStocks.filter(x => x.answer);
+  const cols = [...new Set([...labels, ...done.map(x => x.answer.choice)])];
+  $("#pBoard").replaceChildren(...[...cols, "HUMAN?"].map(c => {
+    const here = done.filter(x => pColumn(x) === c).sort((a, b) => b.answer.confidence - a.answer.confidence);
+    const meaning = c === "HUMAN?" ? `Jev is not sure (confidence below ${pMin.toFixed(2)}): a person checks.` : q && q.criteria[c];
+    return el("div", { class: `column${c === "HUMAN?" ? " human" : ""}` },
+      el("div", { class: "col-h" }, c === "HUMAN?" ? "🙋 HUMAN?" : c, el("span", { class: "n" }, here.length)),
+      el("div", { class: `desc${isTodo(meaning) ? " todo" : ""}` }, meaning || "(a bucket from an edited request)"),
+      ...here.map(x => el("div", { class: `card msg clickable${pFresh.has(x) ? " landed" : ""}${pOpened && pOpened.x === x ? " sel" : ""}`, onclick: () => pOpen(x) },
+        el("div", { class: "text" }, el("b", {}, x.name)),
+        el("div", { class: "meta" }, el("span", { class: "hint" }, "conf."), UI.pbar(x.answer.confidence, pMin, x.answer.confidence < pMin ? "var(--amber)" : "var(--green)"),
+           el("span", {}, x.answer.confidence.toFixed(2))),
+        c === "HUMAN?" ? el("div", { class: "guess" }, `Jev's guess: ${x.answer.choice}`) : null)));
+  }));
+  pFresh.clear();
+  renderPortfolioHud();
+  const x = pOpened && pOpened.x;
+  $("#pDetail").replaceChildren(...(!x ? [el("div", { class: "hint" }, "Click a company: its JSON opens in the Jev editor, and here you see how sure Jev was about every bucket.")]
+    : !x.answer ? [el("div", { class: "hint" }, `${x.name} is not sorted yet. Send it from the Jev editor, or sort the whole portfolio.`)]
+    : [el("div", { class: "col-h" }, `${x.name}: ${x.answer.choice}`, el("span", { class: "n" }, `confidence ${x.answer.confidence.toFixed(2)}`)),
+       el("div", { class: "rows" }, ...Object.entries(x.answer.probabilities || { [x.answer.choice]: x.answer.confidence }).sort((a, b) => b[1] - a[1])
+         .flatMap(([label, p]) => [el("span", {}, label), UI.pbar(p, undefined, label === x.answer.choice ? "var(--green)" : undefined), el("span", {}, p.toFixed(2))]))]));
+}
+function pSet(x, result, request) {
+  Object.assign(x, { answer: result.answers.bucket, response: result, request, status: "done", error: null });
+  pFresh.add(x); resetMarket();
+  if (pOpened && pOpened.x === x) editor.showResponse(pOpened.o, result);
+  renderPortfolio();
+  const ok = P.expert[x.name] === undefined ? null : pColumn(x) === P.expert[x.name], card = document.querySelector("#pBoard .landed");
+  GAME.sfx(ok === false ? "hit" : "coin"); GAME.pop(card, ok === null ? "★" : ok ? "+1" : "✗", ok === false ? "#ff4d55" : "#ffcd38");
+}
+// ----- the market: invest with YOUR invest(), then ten years go by (market.py has what really happened) -----
+let invested = null, finalWorth = null;
+const money = v => `NT$${Math.round(v).toLocaleString()}`;
+const valueAt = (name, amount, year) => P.future[name] ? amount * P.future[name][year] : amount;   // unknown future: stays as it was
+function resetMarket() { invested = null; finalWorth = null; $("#pMarket").hidden = true; $("#pForward").disabled = true; }
+function sortingScore() {
+  const scored = pStocks.filter(x => x.answer && P.expert[x.name] !== undefined);
+  return { right: scored.filter(x => pColumn(x) === P.expert[x.name]).length, total: Object.keys(P.expert).length, done: scored.length };
+}
+function renderPortfolioHud() {
+  const s = sortingScore(), r1 = el("div"), r2 = el("div");
+  const one = UI.ScoreRing(r1, { key: "level2-buckets", label: "buckets like the expert" });
+  if (s.done) one.show(s.right, s.total); else one.clear("sort to see");
+  const two = UI.ScoreRing(r2, { key: "level2-money", label: "your money, 10 years later" });
+  const m = finalWorth === null ? null : finalWorth / P.budget;
+  if (m === null) two.clear(invested ? "fast-forward to see" : "invest to see"); else two.show(Math.min(m, 6), 6, { text: `x${m.toFixed(2)}` });
+  $("#pHud").replaceChildren(r1, r2, el("div", { class: "item" }, el("span", { class: "lbl" }, "stars"),
+    GAME.stars(m === null ? 0 : Math.max(0, Math.min(1, (m - 1) / 3)))), el("div", { class: "item" }, el("span", { class: "lbl" }, "goal"), el("span", { class: "val" }, "x4")));
+  $("#pInvest").disabled = !pStocks.length || pStocks.some(x => !x.answer);
+  $("#pInvest").textContent = `💰 2. Invest ${money(P.budget)}`;
+}
+function renderMarket(year, events = {}) {
+  const a = invested.allocation, names = Object.keys(a).filter(n => a[n] > 0);
+  const totals = Array.from({ length: 11 }, (_, t) => invested.cash + names.reduce((sum, n) => sum + valueAt(n, a[n], t), 0));
+  const top = Math.max(P.budget, ...totals) * 1.08, W = 600, H = 150, X = t => 40 + t / 10 * (W - 50), Y = v => H - 14 - v / top * (H - 24);
+  const path = totals.slice(0, year + 1).map((v, t) => t ? `H${X(t)}V${Y(v)}` : `M${X(0)},${Y(v)}`).join("");
+  const NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = `<line x1="40" x2="${W}" y1="${Y(P.budget)}" y2="${Y(P.budget)}" stroke="#343c6b" stroke-dasharray="4 4"/>` +
+    `<text x="34" y="${Y(P.budget) + 3}" text-anchor="end" fill="#8d9aa8" font-size="9">start</text>` +
+    `<path d="${path}" fill="none" stroke="${totals[year] >= P.budget ? "#2fd27a" : "#ff4d55"}" stroke-width="4"/>` +
+    Array.from({ length: 11 }, (_, t) => `<text x="${X(t)}" y="${H - 2}" text-anchor="middle" fill="${t <= year ? "#e8eef4" : "#4d5b6a"}" font-size="9">${t}</text>`).join("");
+  const rows = names.map(n => {
+    const x = pStocks.find(s => s.name === n), v = valueAt(n, a[n], year), mult = v / a[n], known = !!P.future[n];
+    const sp = !known ? "gem" : v === 0 ? "skull" : mult >= 3 ? "rocket" : mult >= 1.5 ? "up" : mult >= 1 ? "bag" : "down";
+    return el("div", { class: `mrow${v === 0 ? " bust" : mult >= 3 ? " boom" : ""}${events[n] ? " bounce" : ""}`, "data-name": n },
+      GAME.sprite(sp, 3), el("b", {}, n), el("span", { class: "tag dim" }, x && x.answer ? pColumn(x) : "?"),
+      UI.pbar(a[n] / P.budget, undefined, "#ffcd38"), el("span", { class: "val" }, known ? money(v) : `${money(v)} ?`),
+      el("span", { class: `x ${mult >= 1 ? "ok" : "bad"}` }, known ? `x${mult.toFixed(1)}` : "?"));
+  });
+  $("#pMarket").hidden = false;
+  $("#pMarket").replaceChildren(
+    el("div", { class: "mtop" }, el("span", { class: "year" }, `YEAR ${year}`), el("span", { class: "total" }, money(totals[year])),
+      el("span", { class: "hint" }, `invested ${money(P.budget - invested.cash)} · cash ${money(invested.cash)} · companies you added have no known future: they stay as they are`)),
+    el("div", { class: "mrows" }, ...rows), el("div", { class: "chart" }, svg));
+  return totals;
+}
+async function pInvestNow() {
+  const rows = pStocks.filter(x => x.answer).map(x => ({ stock: { name: x.name, notes: x.notes }, answer: x.answer }));
+  try {
+    invested = await UI.api("/api/invest", { results: rows }); finalWorth = null;
+    renderMarket(0); renderPortfolioHud();
+    GAME.sfx("cash"); GAME.burst($("#pInvest"), 8);
+    $("#pForward").disabled = false;
+  } catch (e) {
+    $("#pMarket").hidden = false; $("#pMarket").replaceChildren(el("div", { class: "err" }, e.message), el("div", { class: "hint" }, "Fix invest() in portfolio.py (below), save, and invest again."));
+    GAME.sfx("hit");
+  }
+}
+async function pFastForward() {
+  ["#pForward", "#pInvest", "#pRunAll"].forEach(id => { $(id).disabled = true; });
+  const a = invested.allocation;
+  for (let y = 0; y <= 10; y++) {   // imperative-ok: the years, one after another, on screen
+    const events = Object.fromEntries(Object.keys(a).filter(n => a[n] > 0 && P.future[n] && y > 0)
+      .map(n => [n, Math.floor(valueAt(n, a[n], y) / a[n]) > Math.floor(valueAt(n, a[n], y - 1) / a[n]) ? "up" : valueAt(n, a[n], y) === 0 && valueAt(n, a[n], y - 1) > 0 ? "bust" : null])
+      .filter(([, e]) => e));
+    const totals = renderMarket(y, events);
+    Object.entries(events).forEach(([n, e]) => {
+      const row = document.querySelector(`.mrow[data-name="${CSS.escape(n)}"]`);
+      if (e === "bust") { GAME.sfx("hit"); GAME.shake(row); GAME.pop(row, "BUST!", "#ff4d55"); }
+      else { GAME.sfx("coin"); GAME.pop(row, `x${Math.floor(valueAt(n, a[n], y) / a[n])}`, "#2fd27a"); }
+    });
+    if (!Object.keys(events).length) GAME.sfx("tick");
+    if (y === 10) finalWorth = totals[10];
+    await UI.sleep(520);
+  }
+  const m = finalWorth / P.budget;
+  renderPortfolioHud();
+  if (m >= 4) { GAME.sfx("win"); GAME.banner(`JACKPOT! x${m.toFixed(2)}`); GAME.burst($("#pMarket .total"), 10); }
+  else if (m >= 1) { GAME.sfx("cash"); GAME.banner(`x${m.toFixed(2)}`); }
+  else { GAME.sfx("lose"); GAME.banner(`BUST… x${m.toFixed(2)}`); }
+  ["#pInvest", "#pRunAll"].forEach(id => { $(id).disabled = false; });
+}
+async function pOpen(x) {
+  try {
+    const o = { title: x.name, request: await pRequest(x), response: x.response, onResult: (res, req) => pSet(x, res, req) };
+    pOpened = { x, o }; editor.open(o); renderPortfolio();
+  } catch (e) { x.error = e.message; renderPortfolio(); }
+}
+function pRemove(x) {
+  pStocks = pStocks.filter(y => y !== x);
+  if (pOpened && pOpened.x === x) { pOpened = null; editor = UI.Editor($("#editor"), P_EXPECT); }
+  saveMine(); resetMarket(); renderPortfolio();
+}
+async function pRunAll() {
+  const btn = $("#pRunAll");
+  btn.disabled = true;
+  for (const x of [...pStocks]) {   // imperative-ok: one call after another, in order
+    x.status = "asking"; x.error = null; renderPortfolio();
+    try {
+      const request = await pRequest(x), result = await UI.ask(request);
+      const bad = UI.checkResponse(result, request, P_EXPECT);
+      if (bad.length) throw new Error(bad.join(" "));
+      pSet(x, result, request);
+    } catch (e) { Object.assign(x, { status: "error", error: e.message }); renderPortfolio(); }
+    await UI.sleep(150);
+  }
+  btn.disabled = false;
+  const s = sortingScore();
+  if (s.done === s.total && s.right === s.total) { GAME.sfx("win"); GAME.banner(`EXPERT! ${s.right}/${s.total}`); }
+  renderPortfolioHud();
+}
+function showTab(t) {
+  tab = t; opened = null; pOpened = null;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  $("#tab-inbox").hidden = t !== "inbox"; $("#tab-portfolio").hidden = t !== "portfolio";
+  editor = UI.Editor($("#editor"), t === "inbox" ? EXPECT : P_EXPECT);
+  if (t === "inbox") render(); else renderPortfolio();
+}
+
+(async () => {
+  try { level = await UI.boot(); } catch (e) { document.body.prepend(el("div", { class: "err", style: "padding:12px" }, e.message)); return; }
+  minConf = level.min_confidence;
+  runs = level.items.map(() => ({ status: "idle" }));
+  P = level.portfolio; pMin = P.min_confidence;
+  pStocks = [...P.stocks.map(x => ({ ...x, mine: false })), ...loadMine().map(x => ({ name: x.name, notes: x.notes || "", mine: true }))];
+  $("#minConf").oninput = e => { minConf = +e.target.value; render(); };
+  $("#byUrgency").onchange = render;
+  $("#runAll").onclick = runAll;
+  $("#pMinConf").oninput = e => { pMin = +e.target.value; renderPortfolio(); };
+  $("#pRunAll").onclick = pRunAll;
+  $("#pInvest").onclick = pInvestNow;
+  $("#pForward").onclick = pFastForward;
+  $("#sound").replaceChildren(GAME.soundButton());
+  const code = await UI.api("/api/code", {});
+  $("#iCodeBox").open = /TODO/.test(code["inbox.py"]);
+  UI.CodePanel($("#iCode"), { file: "inbox.py", source: code["inbox.py"], onSaved: async () => {
+    const fresh = await UI.api("/api/level");
+    Object.assign(level, { items: fresh.items, questions: fresh.questions, expected: fresh.expected });
+    runs = level.items.map((_, i) => runs[i] || { status: "idle" }); render();
+  } });
+  $("#pCodeBox").open = /TODO/.test(code["portfolio.py"]);
+  UI.CodePanel($("#pCode"), { file: "portfolio.py", source: code["portfolio.py"], onSaved: async () => {
+    P = (await UI.api("/api/level")).portfolio;   // your new question, buckets, describe() and invest()
+    pStocks = [...P.stocks.map(x => ({ ...x, mine: false })), ...pStocks.filter(x => x.mine).map(({ name, notes }) => ({ name, notes, mine: true }))];
+    resetMarket(); renderPortfolio();
+  } });
+  $("#pAdd").onsubmit = e => {
+    e.preventDefault();
+    const name = $("#pName").value.trim();
+    if (!name) return;
+    pStocks.push({ name, notes: $("#pNotes").value.trim(), mine: true });
+    $("#pName").value = ""; $("#pNotes").value = "";
+    saveMine(); renderPortfolio();
+  };
+  document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  showTab(new URLSearchParams(location.search).get("tab") === "portfolio" ? "portfolio" : "inbox");
+})();
+</script>
+</body>
+</html>

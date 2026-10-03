@@ -1,0 +1,1548 @@
+{
+ "level": 2,
+ "repeats": 3,
+ "model": "jev-latest",
+ "date": "2026-10-02",
+ "seconds": 28,
+ "calls": 189,
+ "input_tokens": 88425,
+ "cost_usd": 0.0037,
+ "data": {
+  "starter": [
+   [
+    {
+     "split": "workshop",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.75
+    },
+    {
+     "split": "workshop",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.77
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.37
+    },
+    {
+     "split": "workshop",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.45
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.59
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 0.96,
+     "urgency": 2.33
+    },
+    {
+     "split": "workshop",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.41,
+     "urgency": 1.8
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.82
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.4
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.03
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.08
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.02
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.61
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.87
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 0.99
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.13
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.02
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.97,
+     "urgency": 1.97
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.83,
+     "urgency": 2.2
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.98,
+     "urgency": 0.94
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "complaint",
+     "has_box": false,
+     "confidence": 1.0,
+     "urgency": 2.77
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.7
+    },
+    {
+     "split": "workshop",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.85
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.37
+    },
+    {
+     "split": "workshop",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.48
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.46
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 0.97,
+     "urgency": 2.48
+    },
+    {
+     "split": "workshop",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.43,
+     "urgency": 1.91
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.8
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.46
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.02
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.02
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.94
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.53
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.93
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 0.98
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.13
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.13
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.96,
+     "urgency": 2.04
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.86,
+     "urgency": 2.15
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.96,
+     "urgency": 0.91
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "complaint",
+     "has_box": false,
+     "confidence": 1.0,
+     "urgency": 2.74
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.73
+    },
+    {
+     "split": "workshop",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.77
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.47
+    },
+    {
+     "split": "workshop",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.5
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.42
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 0.97,
+     "urgency": 2.39
+    },
+    {
+     "split": "workshop",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.42,
+     "urgency": 1.85
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.81
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.43
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.08
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.11
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.94
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.57
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.87
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 0.98
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.18
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.0
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.97,
+     "urgency": 1.86
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.83,
+     "urgency": 2.15
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.97,
+     "urgency": 0.95
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "complaint",
+     "has_box": false,
+     "confidence": 1.0,
+     "urgency": 2.81
+    }
+   ]
+  ],
+  "A: add lost_item box": [
+   [
+    {
+     "split": "workshop",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.71
+    },
+    {
+     "split": "workshop",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.76
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.47
+    },
+    {
+     "split": "workshop",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.46
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.59
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 0.96,
+     "urgency": 2.39
+    },
+    {
+     "split": "workshop",
+     "label": "lost_item",
+     "got": "lost_item",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.9
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.81
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.37
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.12
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.1
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.96
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.54
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.87
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 0.99
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.02
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.02
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "lost_item",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.91
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "lost_item",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.18
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.96,
+     "urgency": 0.92
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "complaint",
+     "has_box": false,
+     "confidence": 1.0,
+     "urgency": 2.79
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.74
+    },
+    {
+     "split": "workshop",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.78
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.44
+    },
+    {
+     "split": "workshop",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.45
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.45
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 0.97,
+     "urgency": 2.39
+    },
+    {
+     "split": "workshop",
+     "label": "lost_item",
+     "got": "lost_item",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.9
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.74
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.44
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.01
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.06
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.96
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.51
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.85
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.01
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.14
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.04
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "lost_item",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.94
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "lost_item",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.2
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.96,
+     "urgency": 0.89
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "complaint",
+     "has_box": false,
+     "confidence": 1.0,
+     "urgency": 2.81
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.73
+    },
+    {
+     "split": "workshop",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.76
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.4
+    },
+    {
+     "split": "workshop",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.46
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.59
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 0.97,
+     "urgency": 2.43
+    },
+    {
+     "split": "workshop",
+     "label": "lost_item",
+     "got": "lost_item",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.86
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.81
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.48
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.06
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.09
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.0
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.5
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.86
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.0
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.16
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.11
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "lost_item",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.97
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "lost_item",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.21
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "question",
+     "has_box": false,
+     "confidence": 0.96,
+     "urgency": 0.9
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "complaint",
+     "has_box": false,
+     "confidence": 1.0,
+     "urgency": 2.76
+    }
+   ]
+  ],
+  "B: add 'other' -> human": [
+   [
+    {
+     "split": "workshop",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.67
+    },
+    {
+     "split": "workshop",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.8
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.37
+    },
+    {
+     "split": "workshop",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.45
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.56
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 0.96,
+     "urgency": 2.33
+    },
+    {
+     "split": "workshop",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.93,
+     "urgency": 1.88
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.78
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.5
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.05
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.09
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.97
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.53
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.9
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.02
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.15
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.07
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.86,
+     "urgency": 1.96
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.89,
+     "urgency": 2.15
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.85,
+     "urgency": 0.96
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.42,
+     "urgency": 2.8
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.67
+    },
+    {
+     "split": "workshop",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.77
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.43
+    },
+    {
+     "split": "workshop",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.51
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.56
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 0.96,
+     "urgency": 2.33
+    },
+    {
+     "split": "workshop",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.93,
+     "urgency": 1.92
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.84
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.55
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.03
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.1
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.95
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.57
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.9
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 0.99
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.1
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.09
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.87,
+     "urgency": 1.9
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.89,
+     "urgency": 2.14
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.84,
+     "urgency": 0.89
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.41,
+     "urgency": 2.82
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.68
+    },
+    {
+     "split": "workshop",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.81
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.41
+    },
+    {
+     "split": "workshop",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.51
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.44
+    },
+    {
+     "split": "workshop",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 0.96,
+     "urgency": 2.36
+    },
+    {
+     "split": "workshop",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.94,
+     "urgency": 1.87
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.79
+    },
+    {
+     "split": "holdout",
+     "label": "order",
+     "got": "order",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.42
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.06
+    },
+    {
+     "split": "holdout",
+     "label": "complaint",
+     "got": "complaint",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 2.11
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.98
+    },
+    {
+     "split": "holdout",
+     "label": "question",
+     "got": "question",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.57
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.9
+    },
+    {
+     "split": "holdout",
+     "label": "job",
+     "got": "job",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.01
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 1.17
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam",
+     "has_box": true,
+     "confidence": 1.0,
+     "urgency": 0.96
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.86,
+     "urgency": 1.89
+    },
+    {
+     "split": "holdout",
+     "label": "lost_item",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.9,
+     "urgency": 2.15
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.84,
+     "urgency": 0.84
+    },
+    {
+     "split": "holdout",
+     "label": "other",
+     "got": "HUMAN",
+     "has_box": false,
+     "confidence": 0.49,
+     "urgency": 2.8
+    }
+   ]
+  ]
+ }
+}

@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>City Replay</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #e3e1da;
+    --block: #e6e2d8; --road: #3a3d42; --mark: #d9d9d9; --ns: #2f7de1; --ew: #e8833a; --walk: #2fa36b; --yellow: #f2c94c;
+    --scooter: #7cc4ff; --car: #ffd166; --bus: #ef476f; --amb: #ffffff; --ped: #2fa36b; --good: #2fa36b; --bad: #d64545;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111214; --panel: #1b1c1f; --ink: #ececee; --muted: #9a9aa2; --line: #2c2d31; --block: #24262b; --road: #3a3d42; --mark: #8a8a8a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 16px 20px 0; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; }
+  header .sub { color: var(--muted); }
+  main { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 16px; padding: 16px 20px 24px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  canvas { width: 100%; height: auto; display: block; border-radius: 8px; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  button, select { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+  input[type=range] { flex: 1; min-width: 120px; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 8px; }
+  .stat { background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+  .stat .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat .v { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  h2 { font-size: 13px; margin: 12px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .junction { border-top: 1px solid var(--line); padding: 6px 0; }
+  .junction .head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+  .junction .sit { color: var(--muted); font: 11px/1.3 ui-monospace, monospace; margin-top: 2px; }
+  .bar { display: grid; grid-template-columns: 116px 1fr 38px; gap: 6px; align-items: center; margin: 2px 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .bar .track { height: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; }
+  .bar .fill { height: 100%; border-radius: 5px; }
+  .chosen { font-weight: 700; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--bg); color: var(--muted); font-weight: 500; }
+  .parts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .parts span b { font-weight: 650; }
+  .empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+  code { font-family: ui-monospace, monospace; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  svg text { fill: var(--muted); font-size: 11px; }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚦 City Replay</h1>
+  <span class="sub">Da'an District, Taipei · Level 5 · <a href="viewer3d.html">open the 3D city</a></span>
+</header>
+<div id="app"></div>
+
+<script src="runs/runs.js"></script>
+<script>
+const RUNS = (window.JUNCTION_RUNS || []).sort((a, b) => a.run - b.run);
+const app = document.getElementById('app');
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const POLICY_COLOR = { 'jev': '#7b5cff', 'jev-no-memory': '#b49cff', 'greedy': '#2f7de1', 'fixed': '#9a9aa2' };
+const ACTIONS = ['north_south', 'east_west', 'walk'];
+const PART_LABEL = { crossed: 'vehicles through', walked: 'people crossed', stopped: 'stopped vehicles', pedestrians_waiting: 'people waiting', angry: 'angry drivers', ambulance_stopped: 'ambulance stopped' };
+
+if (!RUNS.length) {
+  app.innerHTML = `<div class="card empty" style="margin:16px 20px">No runs yet.<br><br>
+    Run <code>python level5-junction/run.py --policy greedy</code>, then reload this page.</div>`;
+} else {
+  app.innerHTML = `<main>
+    <section class="card">
+      <canvas id="cv" width="760" height="760"></canvas>
+      <div class="controls">
+        <select id="runSel"></select>
+        <button id="play">▶ Play</button>
+        <input id="tick" type="range" min="0" value="0">
+        <select id="speed"><option value="600">slow</option><option value="300" selected>normal</option><option value="100">fast</option></select>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--scooter)"></i>scooter</span><span><i style="background:var(--car)"></i>car</span>
+        <span><i style="background:var(--bus)"></i>bus</span><span><i style="background:#fff;border:1px solid #d64545"></i>ambulance</span>
+        <span><i style="background:var(--ped);border-radius:50%"></i>pedestrian</span>
+        <span>tail = speed · <b style="color:#d64545">•</b> = stopped</span>
+      </div>
+    </section>
+    <section class="card">
+      <div class="stats">
+        <div class="stat"><div class="k">Tick</div><div class="v" id="sTick">0</div></div>
+        <div class="stat"><div class="k">Reward</div><div class="v" id="sReward">0</div></div>
+        <div class="stat"><div class="k">Score</div><div class="v" id="sScore">0</div></div>
+        <div class="stat"><div class="k">Energy</div><div class="v" id="sEnergy">0</div></div>
+        <div class="stat"><div class="k">Weather</div><div class="v" id="sWeather">dry</div></div>
+      </div>
+      <h2>Points this tick</h2>
+      <div class="parts" id="parts"></div>
+      <h2>Decisions <span id="predict"></span></h2>
+      <div id="decisions"></div>
+      <h2>Score during this run <span class="tag">vs best earlier run, same map</span></h2>
+      <svg id="pace" viewBox="0 0 400 110" width="100%"></svg>
+      <h2>Learning curve <span class="tag">final score per run</span></h2>
+      <svg id="curve" viewBox="0 0 400 130" width="100%"></svg>
+      <div class="legend" id="curveLegend"></div>
+    </section>
+  </main>`;
+  start();
+}
+
+function start() {
+  const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  const runSel = document.getElementById('runSel'), tickEl = document.getElementById('tick');
+  const playBtn = document.getElementById('play'), speedEl = document.getElementById('speed');
+  RUNS.forEach((r, i) => runSel.add(new Option(`Run ${r.run} · ${r.policy} · ${r.map || 'grid'}${r.exam ? ' · EXAM' : ''} · ${r.score}`, i)));
+  runSel.value = RUNS.length - 1;
+  let run = RUNS[RUNS.length - 1], t = 0, timer = null;
+
+  function load() {
+    run = RUNS[runSel.value]; t = 0;
+    tickEl.max = run.trace.length - 1; tickEl.value = 0;
+    drawCurve(); show();
+  }
+  function show() {
+    const s = run.trace[t];
+    drawCity(ctx, run.layout, s);
+    document.getElementById('sTick').textContent = `${s.t + 1}/${run.trace.length}`;
+    const rw = document.getElementById('sReward');
+    rw.textContent = (s.reward >= 0 ? '+' : '') + s.reward.toFixed(1);
+    rw.style.color = s.reward >= 0 ? css('--good') : css('--bad');
+    document.getElementById('sScore').textContent = s.score_after.toFixed(1);
+    document.getElementById('sEnergy').textContent = s.energy_after ?? '-';
+    document.getElementById('sWeather').textContent = s.weather === 'rain' ? '🌧 rain' : '☀ dry';
+    document.getElementById('parts').innerHTML = Object.entries(s.parts || {})
+      .filter(([, v]) => v !== 0)
+      .map(([k, v]) => `<span>${PART_LABEL[k] || k}: <b style="color:${v >= 0 ? css('--good') : css('--bad')}">${v >= 0 ? '+' : ''}${v.toFixed(1)}</b></span>`).join('');
+    const d = s.decision || {};
+    document.getElementById('predict').innerHTML = d.beat_best != null ? `<span class="tag">🔮 beat my best: ${(d.beat_best * 100).toFixed(0)}%</span>` : '';
+    const colors = { north_south: css('--ns'), east_west: css('--ew'), walk: css('--walk') };
+    document.getElementById('decisions').innerHTML = Object.entries(run.layout.junctions).map(([jid, j]) => {
+      const info = (d.junctions || {})[jid] || {};
+      const action = s.actions[jid];
+      let tag = '';
+      if ((s.forced || []).includes(jid)) tag = '<span class="tag">locked: minimum green</span>';
+      else if (info.explored) tag = `<span class="tag">exploring (Jev said ${info.jev_action})</span>`;
+      else if (info.rule) tag = `<span class="tag">${info.rule}</span>`;
+      else if (!info.probabilities) tag = '<span class="tag">rule-based officer</span>';
+      const probs = info.probabilities || { [action]: 1 };
+      const bars = ACTIONS.map((a) => {
+        const p = probs[a] ?? 0;
+        return `<div class="bar"><span class="${a === action ? 'chosen' : ''}">${a === action ? '▶ ' : ''}${a}</span>
+          <div class="track"><div class="fill" style="width:${p * 100}%;background:${colors[a]}"></div></div><span>${(p * 100).toFixed(0)}%</span></div>`;
+      }).join('');
+      const r = (s.rewards || {})[jid];
+      return `<div class="junction"><div class="head"><span>${j.name}</span><span>${r != null ? (r >= 0 ? '+' : '') + r.toFixed(1) : ''} ${tag}</span></div>
+        ${bars}<div class="sit">${(s.situations || {})[jid] || ''}</div></div>`;
+    }).join('');
+    drawPace();
+  }
+  function step() {
+    if (t < run.trace.length - 1) { t++; tickEl.value = t; show(); } else stop();
+  }
+  function stop() { clearInterval(timer); timer = null; playBtn.textContent = '▶ Play'; }
+  playBtn.onclick = () => {
+    if (timer) return stop();
+    if (t >= run.trace.length - 1) t = 0;
+    playBtn.textContent = '⏸ Pause';
+    timer = setInterval(step, Number(speedEl.value));
+  };
+  speedEl.onchange = () => { if (timer) { stop(); playBtn.click(); } };
+  tickEl.oninput = () => { t = Number(tickEl.value); show(); };
+  runSel.onchange = () => { stop(); load(); };
+
+  function drawPace() {
+    const svg = document.getElementById('pace');
+    const best = RUNS.filter((r) => r.run < run.run && r.policy === run.policy && (r.map || 'grid') === (run.map || 'grid'))
+      .sort((a, b) => b.score - a.score)[0];
+    const series = [run.score_by_tick, best?.score_by_tick].filter(Boolean);
+    const all = series.flat(); const lo = Math.min(0, ...all), hi = Math.max(1, ...all);
+    const n = run.score_by_tick.length - 1;
+    const X = (i) => 30 + (i / n) * 360, Y = (v) => 100 - ((v - lo) / (hi - lo)) * 90;
+    const path = (arr, k = arr.length) => arr.slice(0, k).map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+    svg.innerHTML = `<line x1="30" x2="390" y1="${Y(0)}" y2="${Y(0)}" stroke="${css('--line')}"/>
+      <text x="2" y="${Y(hi) + 4}">${hi.toFixed(0)}</text><text x="2" y="${Y(lo)}">${lo.toFixed(0)}</text>
+      ${best ? `<path d="${path(best.score_by_tick)}" fill="none" stroke="${css('--muted')}" stroke-dasharray="4 3" stroke-width="1.5"/>
+      <text x="240" y="12">best before: ${best.score}</text>` : ''}
+      <path d="${path(run.score_by_tick, t + 1)}" fill="none" stroke="${POLICY_COLOR[run.policy] || '#7b5cff'}" stroke-width="2.5"/>`;
+  }
+  function drawCurve() {
+    const svg = document.getElementById('curve');
+    const lo = Math.min(0, ...RUNS.map((r) => r.score)), hi = Math.max(1, ...RUNS.map((r) => r.score));
+    const w = 360 / Math.max(1, RUNS.length);
+    const Y = (v) => 118 - ((v - lo) / (hi - lo)) * 105;
+    svg.innerHTML = `<line x1="30" x2="390" y1="${Y(0)}" y2="${Y(0)}" stroke="${css('--line')}"/>
+      <text x="2" y="${Y(hi) + 4}">${hi.toFixed(0)}</text><text x="2" y="${Y(lo)}">${lo.toFixed(0)}</text>` +
+      RUNS.map((r, i) => {
+        const y0 = Y(0), y1 = Y(r.score);
+        const sel = r === run ? `stroke="${css('--ink')}" stroke-width="2"` : '';
+        return `<rect x="${30 + i * w + 2}" width="${Math.max(2, w - 4)}" y="${Math.min(y0, y1)}" height="${Math.max(1, Math.abs(y1 - y0))}" rx="2" fill="${POLICY_COLOR[r.policy]}" ${sel}><title>Run ${r.run} ${r.policy} ${r.map || 'grid'}: ${r.score}</title></rect>`;
+      }).join('');
+    const used = [...new Set(RUNS.map((r) => r.policy))];
+    document.getElementById('curveLegend').innerHTML = used.map((p) => `<span><i style="background:${POLICY_COLOR[p]}"></i>${p}</span>`).join('');
+  }
+  load();
+}
+
+// Same geometry as City.render() in city.py: every road cell is one square.
+function geometry(layout) {
+  const L = layout.length;
+  const js = Object.values(layout.junctions);
+  const cols = Math.max(...js.map((j) => j.x)) + 1, rows = Math.max(...js.map((j) => j.y)) + 1;
+  const w = 2 * L + cols * 2 + (cols - 1) * L, h = 2 * L + rows * 2 + (rows - 1) * L;
+  const cs = Math.floor(760 / Math.max(w, h));
+  const ox = Math.floor((760 - w * cs) / 2), oy = Math.floor((760 - h * cs) / 2);
+  const corner = (j) => [L + j.x * (L + 2), L + j.y * (L + 2)];
+  function cell(road, p) {
+    const [c0, r0] = corner(layout.junctions[road.to]);
+    if (road.side === 'west') return [c0 - L + p, r0 + 1];
+    if (road.side === 'east') return [c0 + 2 + L - 1 - p, r0];
+    if (road.side === 'north') return [c0, r0 - L + p];
+    return [c0 + 1, r0 + 2 + L - 1 - p];
+  }
+  const dir = { west: [1, 0], east: [-1, 0], north: [0, 1], south: [0, -1] }; // driving direction per approach
+  return { L, cols, rows, w, h, cs, ox, oy, corner, cell, dir };
+}
+
+function drawCity(ctx, layout, s) {
+  const g = geometry(layout);
+  const X = (c) => g.ox + c * g.cs, Y = (r) => g.oy + r * g.cs;
+  ctx.fillStyle = css('--bg'); ctx.fillRect(0, 0, 760, 760);
+  ctx.fillStyle = css('--block'); ctx.fillRect(X(0), Y(0), g.w * g.cs, g.h * g.cs);
+  // roads: full strips through every junction row and column
+  ctx.fillStyle = css('--road');
+  const js = Object.entries(layout.junctions);
+  for (const [, j] of js) {
+    const [c0, r0] = g.corner(j);
+    ctx.fillRect(X(0), Y(r0), g.w * g.cs, 2 * g.cs);
+    ctx.fillRect(X(c0), Y(0), 2 * g.cs, g.h * g.cs);
+  }
+  // lane separators
+  ctx.strokeStyle = css('--mark'); ctx.setLineDash([g.cs * 0.6, g.cs * 0.6]); ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const [, j] of js) {
+    const [c0, r0] = g.corner(j);
+    ctx.moveTo(X(0), Y(r0 + 1)); ctx.lineTo(X(g.w), Y(r0 + 1));
+    ctx.moveTo(X(c0 + 1), Y(0)); ctx.lineTo(X(c0 + 1), Y(g.h));
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  // road names
+  ctx.fillStyle = css('--muted'); ctx.font = `600 ${Math.max(10, g.cs * 0.6)}px system-ui`;
+  const seenCol = new Set(), seenRow = new Set();
+  for (const [, j] of js) {
+    const [c0, r0] = g.corner(j);
+    const [ns, ew] = j.name.split(' x ');
+    if (!seenCol.has(j.x)) { seenCol.add(j.x); ctx.fillText(ns, X(c0 + 2.3), Y(1)); }
+    if (!seenRow.has(j.y)) { seenRow.add(j.y); ctx.fillText(ew, X(0.3), Y(r0 - 0.4)); }
+  }
+  // vehicles
+  const color = { s: css('--scooter'), c: css('--car'), B: css('--bus'), A: css('--amb') };
+  const blink = s.t % 2;
+  for (const [sid, cars] of Object.entries(s.roads || {})) {
+    const road = layout.roads[sid];
+    const [dx, dy] = g.dir[road.side];
+    for (const [pos, sym, speed] of cars) {
+      const [c, r] = g.cell(road, pos);
+      const cx = X(c) + g.cs / 2, cy = Y(r) + g.cs / 2;
+      if (speed > 0) { // tail = speed
+        ctx.strokeStyle = color[sym]; ctx.globalAlpha = 0.35; ctx.lineWidth = g.cs * 0.35;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - dx * speed * g.cs * 0.7, cy - dy * speed * g.cs * 0.7); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      const size = sym === 's' ? 0.5 : sym === 'B' ? 0.85 : 0.7;
+      const half = g.cs * size / 2;
+      ctx.fillStyle = color[sym];
+      roundRect(ctx, cx - half, cy - half, half * 2, half * 2, 3);
+      if (sym === 'A') { ctx.strokeStyle = blink ? '#d64545' : '#2f7de1'; ctx.lineWidth = 2; ctx.stroke(); }
+      if (speed === 0) { ctx.fillStyle = '#d64545'; ctx.beginPath(); ctx.arc(cx + half, cy - half, 2.2, 0, 7); ctx.fill(); }
+    }
+  }
+  // vehicles waiting outside the city
+  ctx.font = `700 ${Math.max(10, g.cs * 0.6)}px system-ui`;
+  for (const [sid, n] of Object.entries(s.outside || {})) {
+    const road = layout.roads[sid];
+    const [c, r] = g.cell(road, 0);
+    ctx.fillStyle = css('--bad');
+    ctx.fillText(`+${n}`, X(c) + (road.side === 'east' ? g.cs : road.side === 'west' ? -g.cs * 1.2 : 0),
+      Y(r) + (road.side === 'north' ? -2 : road.side === 'south' ? g.cs * 1.8 : g.cs * 0.8));
+  }
+  // junction boxes: the light after the officer's decision
+  for (const [jid, j] of js) {
+    const [c0, r0] = g.corner(j);
+    const [light, yellow] = (s.lights_after || {})[jid] || s.lights[jid];
+    ctx.fillStyle = yellow ? css('--yellow') : light === 'NS' ? css('--ns') : light === 'EW' ? css('--ew') : css('--walk');
+    roundRect(ctx, X(c0) + 1, Y(r0) + 1, 2 * g.cs - 2, 2 * g.cs - 2, 4);
+    ctx.fillStyle = '#111'; ctx.font = `700 ${Math.max(9, g.cs * 0.7)}px system-ui`; ctx.textAlign = 'center';
+    ctx.fillText(yellow ? 'Y' : light === 'NS' ? '↕' : light === 'EW' ? '↔' : 'W', X(c0 + 1), Y(r0 + 1) + g.cs * 0.25);
+    ctx.textAlign = 'left';
+    // pedestrians waiting at the corner
+    ctx.fillStyle = css('--ped');
+    const n = Math.min(s.peds[jid] || 0, 16);
+    for (let i = 0; i < n; i++) {
+      ctx.beginPath(); ctx.arc(X(c0 + 2) + 4 + (i % 4) * 5, Y(r0 + 2) + 4 + Math.floor(i / 4) * 5, 2, 0, 7); ctx.fill();
+    }
+  }
+  if (s.weather === 'rain') {
+    ctx.fillStyle = 'rgba(80,120,200,0.10)'; ctx.fillRect(0, 0, 760, 760);
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); ctx.fill();
+}
+</script>
+</body>
+</html>

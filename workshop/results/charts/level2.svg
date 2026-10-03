@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="690" height="188" viewBox="0 0 690 188" role="img" aria-label="Level 2: where did each message go?"><title>Level 2: where did each message go?</title><style>
+  .t { fill: #0b0b0b; font: 13px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .m { fill: #52514e; font: 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .w { fill: #ffffff; font: 600 12px system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  .grid { stroke: #e4e2dc; stroke-width: 1; }
+  .ref { stroke: #52514e; stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .s1 { fill: #2a78d6; } .s1l { stroke: #2a78d6; } .s2 { fill: #eb6834; }
+  .mean { stroke: #0b0b0b; stroke-width: 2.5; }
+  @media (prefers-color-scheme: dark) {
+    .t { fill: #ffffff; } .m { fill: #c3c2b7; } .grid { stroke: #3a3936; } .ref { stroke: #c3c2b7; }
+    .s1 { fill: #3987e5; } .s1l { stroke: #3987e5; } .s2 { fill: #d95926; } .mean { stroke: #ffffff; }
+  }
+</style><text class="m" x="230" y="20">out of 21 messages (mean of the repeats)</text><text class="t" x="220" y="51" text-anchor="end">starter</text><path d="M230.0,34.0 H548.0 Q548.0,34.0 548.0,34.0 V60.0 Q548.0,60.0 548.0,60.0 H230.0 Z" fill="#0ca30c"/><text class="w" x="238" y="51" style="fill:#fff">✓ 16</text><path d="M550.0,34.0 H568.0 Q568.0,34.0 568.0,34.0 V60.0 Q568.0,60.0 568.0,60.0 H550.0 Z" fill="#fab219"/><path d="M570.0,34.0 H646.0 Q650.0,34.0 650.0,38.0 V56.0 Q650.0,60.0 646.0,60.0 H570.0 Z" fill="#d03b3b"/><text class="w" x="578.0" y="51" style="fill:#fff">✗ 4</text><text class="t" x="220" y="95" text-anchor="end">A: add lost_item box</text><path d="M230.0,78.0 H608.0 Q608.0,78.0 608.0,78.0 V104.0 Q608.0,104.0 608.0,104.0 H230.0 Z" fill="#0ca30c"/><text class="w" x="238" y="95" style="fill:#fff">✓ 19</text><path d="M610.0,78.0 H646.0 Q650.0,78.0 650.0,82.0 V100.0 Q650.0,104.0 646.0,104.0 H610.0 Z" fill="#d03b3b"/><text class="w" x="618.0" y="95" style="fill:#fff">✗ 2</text><text class="t" x="220" y="139" text-anchor="end">B: add &#x27;other&#x27; -&gt; human</text><path d="M230.0,122.0 H548.0 Q548.0,122.0 548.0,122.0 V148.0 Q548.0,148.0 548.0,148.0 H230.0 Z" fill="#0ca30c"/><text class="w" x="238" y="139" style="fill:#fff">✓ 16</text><path d="M550.0,122.0 H646.0 Q650.0,122.0 650.0,126.0 V144.0 Q650.0,148.0 646.0,148.0 H550.0 Z" fill="#fab219"/><text class="t" x="558.0" y="139" style="fill:#0b0b0b">? 5</text><rect x="230" y="168" width="10" height="10" rx="2" fill="#0ca30c"/><text class="m" x="244" y="177">right box</text><rect x="311" y="168" width="10" height="10" rx="2" fill="#fab219"/><text class="m" x="325" y="177">to a human</text><rect x="399" y="168" width="10" height="10" rx="2" fill="#d03b3b"/><text class="m" x="413" y="177">wrong box</text></svg>

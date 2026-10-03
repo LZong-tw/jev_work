@@ -1,0 +1,1206 @@
+{
+ "level": 1,
+ "repeats": 3,
+ "model": "jev-latest",
+ "date": "2026-10-02",
+ "seconds": 62,
+ "calls": 234,
+ "input_tokens": 76980,
+ "cost_usd": 0.0032,
+ "data": {
+  "naive question": [
+   [
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    }
+   ]
+  ],
+  "A: one question + criteria": [
+   [
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    }
+   ]
+  ],
+  "B: three small questions": [
+   [
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "spam"
+    }
+   ],
+   [
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "workshop",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "workshop",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "spam",
+     "got": "spam"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    },
+    {
+     "split": "holdout",
+     "label": "ok",
+     "got": "ok"
+    }
+   ]
+  ]
+ }
+}
