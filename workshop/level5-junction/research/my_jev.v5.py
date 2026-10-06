@@ -134,19 +134,16 @@ RUSH = {9: ("cars from left to right", "C"), 10: ("cars from bottom to top", "A"
         15: ("people walk, and cars to the top", "A"), 16: ("cars from left to right", "C"),
         17: ("cars to the left and to the bottom", "A and C"), 18: ("a crowd walks", "W"),
         19: ("cars from bottom to top", "A")}
-WALK_STARVE_TICKS = 12     # no W for this long and at least WALK_MIN people waiting -> force W
+WALK_STARVE_TICKS = 6      # no W for this long and at least WALK_MIN people waiting -> force W
 WALK_MIN = 3               # fewer walkers than this wait longer, so cars keep their green
 WALK_MAX_WAIT = 12         # nobody waits longer than this, however few they are
 TREND_TICKS = 5
 WALK_BATCH = 3             # W takes everyone at once, cars only 1 per lane: let people gather, count them at 1/3
-QUEUE_WEIGHT = 0.1         # long queues count a little, the cars that actually move count most
-DOWN_WEIGHT = 0.15         # A/C: hold back cars headed for a crossing whose entry is already queued
+QUEUE_WEIGHT = 0.3         # long queues win even if they move fewer per tick (left turns move max 2, straight+bikes 4)
 TIE_MARGIN = 0.5           # hybrid: Jev only chooses among phases this close to the program's best
-JEV_MIN_PROB = 0.6         # hybrid: below this Jev's pick is ignored
-# Oversaturated windows (offline sim): every wrong pick there snowballs, so Jev is not asked.
-NO_JEV = (("09:00", "09:30"), ("17:00", "18:00"), ("19:00", "19:30"))
-# Who sets the lights: "rule" program only (best score), "hybrid" program + guarded Jev tie-break.
-MODE = os.environ.get("JEV_MODE", "rule")
+# Who sets the lights: "rule" program only, "hybrid" program + Jev tie-break,
+# "jev" program decides when walkers go (W), Jev picks among the car phases A-D. Set JEV_MODE per server process.
+MODE = os.environ.get("JEV_MODE", "hybrid")
 
 
 def demand(j: Crossing) -> dict[Phase, int]:
@@ -233,69 +230,50 @@ def describe(j: Crossing, history: list[State]) -> str:
     return "\n".join(lines)
 
 
-def downstream_queue(j: Crossing, by_id: dict[int, Crossing]) -> dict[Phase, int]:
-    """Cars already queued at the entry of the next crossing that A / C would send them into."""
-    out = {"north": "south", "south": "north", "east": "west", "west": "east"}
-    q = {p: 0 for p in PHASES}
-    for phase, sides in (("A", ("north", "south")), ("C", ("east", "west"))):
-        for side in sides:
-            if nxt := DOWNSTREAM.get((j["id"], out[side])):
-                q[phase] += sum(by_id[nxt[0]]["cars"][nxt[1]].values())
-    return q
-
-
-def phase_values(j: Crossing, by_id: dict[int, Crossing]) -> dict[Phase, float]:
-    sv, d, down = served(j), demand(j), downstream_queue(j, by_id)
-    return {p: sv[p] + QUEUE_WEIGHT * d[p] - DOWN_WEIGHT * down[p] for p in PHASES}
-
-
-def jev_allowed(clock: str) -> bool:
-    return MODE == "hybrid" and not any(a <= clock < b for a, b in NO_JEV)
-
-
 async def decide(history: list[State], current: State) -> Lights:
-    by_id = {j["id"]: j for j in current["crossings"]}
-    lights: Lights = {}
-    ties: dict[int, list[Phase]] = {}
-    for j in current["crossings"]:
-        cid = j["id"]
-        if walk_due(history, j) == 0:
-            lights[cid] = "W"
-            continue
-        value = phase_values(j, by_id)
-        best = max(PHASES, key=value.get)
-        lights[cid] = best
-        close = [p for p in PHASES if p != "W" and value[p] >= value[best] - TIE_MARGIN]
-        if best != "W" and len(close) > 1:
-            ties[cid] = close
-
-    print(f"[waiting] {current['clock']}  cars+people waiting: {total_waiting(current)}  "
-          + "  ".join(f"#{j['id']}:{sum(demand(j).values())}" for j in current["crossings"]), flush=True)
-    if not ties or not jev_allowed(current["clock"]):
-        return lights
-
     state = ("Score: every tick +1 for each vehicle or person that gets across, -0.2 for each one still waiting. "
              "Each lane lets 1 vehicle across per tick, so long queues only shrink by giving them green; "
              "a lane left red for many ticks keeps costing points every tick. "
-             "The program already picked the best phases; at some crossings a few are nearly equal, "
-             "and you break that tie.\n")
+             "When people walk (W) is decided by the program; you only pick among the car greens A-D, "
+             "and the program weighs your pick against the counted throughput.\n")
     state += f"Time {current['clock']}. A 2x2 grid: crossing 0 top left, 1 top right, 2 bottom left, 3 bottom right.\n"
     state += rush_outlook(current["clock"]) + " 1 tick = 3 minutes.\n"
     state += "\n".join(describe(j, history) for j in current["crossings"])
+    if history:
+        prev = history[-1]
+        state += (f"\nLast tick the lights chosen were {prev.get('lights_chosen')}; "
+                  f"everyone waiting in the city went {total_waiting(prev)} -> {total_waiting(current)}.")
+
+    print(f"[waiting] {current['clock']}  cars+people waiting: {total_waiting(current)}  "
+          + "  ".join(f"#{j['id']}:{sum(demand(j).values())}" for j in current["crossings"]), flush=True)
+    for j in current["crossings"]:
+        c = j["cars"]
+        print(f"  [lanes] #{j['id']} " + " ".join(f"{s[0]}:L{c[s]['left']}/S{c[s]['straight_right']}/B{c[s]['bikes']}" for s in c)
+              + f" ppl:{sum(j['people'].values())}", flush=True)
+    car_phases = [p for p in PHASES if p != "W"]
     questions = {}
-    for cid, close in ties.items():
-        sv, d = served(by_id[cid]), demand(by_id[cid])
+    for j in current["crossings"]:
+        cid, d, sv = j["id"], demand(j), served(j)
         options = {p: f"{PHASES[p]}: +{sv[p]} now, {d[p] - sv[p]} still waiting on it after, "
-                      f"last green {ticks_since(history, cid, p)} ticks ago" for p in close}
+                      f"last green {ticks_since(history, cid, p)} ticks ago" for p in car_phases}
         questions[str(cid)] = choice(
-            f"Crossing {cid}: which of these nearly equal greens earns the most points over the next few ticks?", options)
-    try:
-        answers = await ask_jev(state, questions)
-    except Exception as e:  # Jev down or slow: the program's pick stands
-        print(f"[jev] skipped: {e}", flush=True)
-        return lights
-    for cid, close in ties.items():
-        a = answers.get(str(cid), {})
-        if a.get("choice") in close and a.get("probabilities", {}).get(a["choice"], 0.0) >= JEV_MIN_PROB:
-            lights[cid] = a["choice"]
+            f"Crossing {cid}: which green earns the most points over the next few ticks? "
+            f"Weigh vehicles crossing now against queues that have waited long and keep losing points.", options)
+    answers = await ask_jev(state, questions) if MODE != "rule" else {}
+
+    lights: Lights = {}
+    for j in current["crossings"]:
+        cid, sv, d = j["id"], served(j), demand(j)
+        probs = answers.get(str(cid), {}).get("probabilities", {})
+        if walk_due(history, j) == 0:
+            lights[cid] = "W"
+            continue
+        value = {p: sv[p] + QUEUE_WEIGHT * d[p] for p in PHASES}
+        rule = max(PHASES, key=value.get)
+        close = [p for p in car_phases if value[p] >= value[rule] - TIE_MARGIN]
+        if MODE == "hybrid" and rule != "W" and len(close) > 1 and probs:
+            rule = max(close, key=lambda p: probs.get(p, 0.0))
+        if MODE == "jev" and rule != "W" and probs:
+            rule = max(car_phases, key=lambda p: probs.get(p, 0.0))
+        lights[cid] = rule
     return lights

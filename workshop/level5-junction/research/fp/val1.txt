@@ -1,0 +1,5 @@
+{} mean=356.6 sd=143.1 min=90.6 diff_vs_0=+0.0±0.0(se)
+{'qw': 0.1, 'walk_starve': 12, 'down_w': 0.15} mean=425.8 sd=137.9 min=70.0 diff_vs_0=+69.1±25.5(se)
+{'qw': 0.2, 'walk_starve': 9, 'down_w': 0.15} mean=390.8 sd=165.6 min=106.2 diff_vs_0=+34.1±32.3(se)
+{'qw': 0.3, 'walk_starve': 9, 'down_w': 0.3} mean=380.1 sd=124.7 min=64.4 diff_vs_0=+23.5±25.4(se)
+{'qw': 0.3, 'walk_starve': 18, 'down_w': 0.3} mean=390.9 sd=144.4 min=81.4 diff_vs_0=+34.3±26.7(se)

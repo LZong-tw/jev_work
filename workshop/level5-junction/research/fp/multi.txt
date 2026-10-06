@@ -1,0 +1,30 @@
+rule seed 1 score 246.2 vehX 1800 pplX 1175 wv 10569 wp 3075 leftover 61
+rule seed 2 score 191.6 vehX 1823 pplX 1177 wv 10951 wp 3091 leftover 51
+rule seed 3 score 159.6 vehX 1790 pplX 1146 wv 10844 wp 3038 leftover 60
+rule seed 4 score 484.6 vehX 1800 pplX 1131 wv 9358 wp 2874 leftover 50
+rule seed 5 score 536.2 vehX 1755 pplX 1125 wv 8789 wp 2930 leftover 61
+rule seed 6 score 343.0 vehX 1799 pplX 1131 wv 10069 wp 2866 leftover 64
+rule seed 7 score 468.8 vehX 1815 pplX 1206 wv 9707 wp 3054 leftover 49
+rule seed 8 score 184.8 vehX 1764 pplX 1203 wv 10786 wp 3125 leftover 78
+rule seed 9 score 233.4 vehX 1818 pplX 1150 wv 10648 wp 3025 leftover 52
+rule seed 10 score 217.6 vehX 1779 pplX 1120 wv 10518 wp 2889 leftover 55
+  rule score: mean 306.6 sd 140.9
+  rule vehX: mean 1794.3 sd 22.6
+  rule pplX: mean 1156.4 sd 31.9
+  rule wv: mean 10223.9 sd 723.8
+  rule wp: mean 2996.7 sd 97.4
+relaxed seed 1 score -12520.4 vehX 1767 pplX 0 wv 109 wp 71328 leftover 23
+relaxed seed 2 score -13035.8 vehX 1804 pplX 0 wv 103 wp 74096 leftover 24
+relaxed seed 3 score -12467.4 vehX 1781 pplX 0 wv 78 wp 71164 leftover 23
+relaxed seed 4 score -12661.8 vehX 1778 pplX 0 wv 72 wp 72127 leftover 25
+relaxed seed 5 score -12448.4 vehX 1814 pplX 0 wv 70 wp 71242 leftover 24
+relaxed seed 6 score -12773.0 vehX 1809 pplX 0 wv 98 wp 72812 leftover 24
+relaxed seed 7 score -12864.0 vehX 1753 pplX 0 wv 94 wp 72991 leftover 25
+relaxed seed 8 score -12764.4 vehX 1766 pplX 0 wv 65 wp 72587 leftover 27
+relaxed seed 9 score -12654.2 vehX 1793 pplX 0 wv 83 wp 72153 leftover 23
+relaxed seed 10 score -12721.2 vehX 1799 pplX 0 wv 102 wp 72499 leftover 24
+  relaxed score: mean -12691.1 sd 183.2
+  relaxed vehX: mean 1786.4 sd 20.5
+  relaxed pplX: mean 0.0 sd 0.0
+  relaxed wv: mean 87.4 sd 15.7
+  relaxed wp: mean 72299.9 sd 912.5
